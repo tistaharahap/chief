@@ -85,7 +85,7 @@ def get_title_agent(
 
     Args:
         anthropic_model_name: The Anthropic model identifier for title generation
-        openai_model_name: The OpenAI model identifier for title generation  
+        openai_model_name: The OpenAI model identifier for title generation
         temperature: Low temperature for consistent titles. Defaults to 0.1.
 
     Returns:
@@ -103,5 +103,41 @@ def get_title_agent(
         title_model,
         name="TitleGenerator",
         system_prompt=TITLE_GENERATION_SYSTEM_PROMPT,
+        model_settings=settings,
+    )
+
+
+def get_compression_agent() -> Agent:
+    """
+    Returns a lightweight agent specifically for compressing conversation history.
+
+    Uses the fallback model configuration with low temperature for consistent compression
+    that preserves meaning and nuances while reducing token count.
+
+    Returns:
+        Agent: The context compression agent
+    """
+    compression_prompt = """You are a context compression specialist. Your task is to compress conversation history while:
+
+PRIORITY 1: Preserve meaning over token reduction - never sacrifice understanding for brevity
+PRIORITY 2: Capture nuances and subtleties - small details often matter most for continuity  
+PRIORITY 3: Maintain key points and decisions - but subordinate to priorities 1 & 2
+
+Compress the following conversation history into a coherent summary that preserves:
+- Technical decisions and their reasoning
+- User preferences and established patterns
+- Unresolved issues or pending tasks
+- Context needed for future messages
+- Subtle implications and nuanced understanding
+
+Output a flowing narrative that reads as natural context, not bullet points."""
+
+    settings = ModelSettings(temperature=0.1)  # Consistent compression
+    fallback_model = get_default_model()
+
+    return Agent(
+        fallback_model,
+        name="ContextCompressor",
+        system_prompt=compression_prompt,
         model_settings=settings,
     )

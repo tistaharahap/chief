@@ -1,4 +1,5 @@
 """Rich-based chat interface components with history support."""
+
 import asyncio
 import contextlib
 import json
@@ -274,6 +275,7 @@ class ChatInterface:
         deps: Any = None,
         app_name: str = "chatinterface",
         assistant_name: str = "Assistant",
+        context_window: int = 200_000,
     ):
         self.agent = agent
         self.deps = deps
@@ -284,13 +286,14 @@ class ChatInterface:
         self.history_manager = HistoryManager(app_name)
         self.history_prompt = RichHistoryPrompt(self.console, self.history_manager)
         self.running = True
-        
+
         # Import here to avoid circular imports
         from libchatinterface.session import SessionManager
-        self.session_manager = SessionManager(app_name)
-        
+
+        self.session_manager = SessionManager(app_name, context_window=context_window)
+
         # Log system prompt if available
-        system_prompt = getattr(agent, 'system_prompt', None)
+        system_prompt = getattr(agent, "system_prompt", None)
         if system_prompt:
             self.session_manager.log_system_prompt(system_prompt)
 
@@ -321,46 +324,72 @@ class ChatInterface:
         with contextlib.suppress(Exception):
             await self.session_manager.update_title_with_ai()
 
+    def _prepare_agent_with_context(self) -> Any:
+        """Prepare agent with compressed context if available."""
+        if not self.session_manager.compressed_context:
+            return self.agent
+
+        # Create agent with extended system prompt including compressed context
+        from pydantic_ai import Agent
+
+        # Get the original system prompt and extend it with compressed context
+        original_prompt = getattr(self.agent, "system_prompt", "")
+        extended_prompt = f"{original_prompt}\n\nPrevious Session Context: {self.session_manager.compressed_context}"
+
+        # Create new agent instance with extended system prompt
+        # Copy all settings from the original agent
+        return Agent(
+            model=self.agent.model,
+            name=self.agent.name,
+            system_prompt=extended_prompt,
+            deps_type=getattr(self.agent, "deps_type", None),
+            tools=getattr(self.agent, "tools", []),
+            model_settings=getattr(self.agent, "model_settings", None),
+            mcp_servers=getattr(self.agent, "mcp_servers", None),
+        )
+
     def show_usage_metadata(self) -> None:
         """Display session usage metadata at bottom of interface."""
         # Only show if we have messages
         if self.session_manager.message_count == 0:
             return
-            
+
         # Get session costs
         session_costs = self.session_manager.session_costs
         total = session_costs.total_usage
-        
+
         # Don't show if no usage data yet
         if total.total_tokens == 0:
             return
-        
+
         # Create subtle horizontal divider
         self.console.rule(style="dim")
-        
+
         # Format usage information
         usage_parts = []
-        
+
         # Tokens
         if total.input_tokens > 0 or total.output_tokens > 0:
-            tokens_text = f"Tokens: {format_token_count(total.input_tokens)} in, {format_token_count(total.output_tokens)} out"
+            tokens_text = (
+                f"Tokens: {format_token_count(total.input_tokens)} in, {format_token_count(total.output_tokens)} out"
+            )
             if total.cached_tokens > 0:
                 tokens_text += f", {format_token_count(total.cached_tokens)} cached"
             tokens_text += f" ({format_token_count(total.total_tokens)} total)"
             usage_parts.append(tokens_text)
-        
+
         # Requests
         if total.requests > 0:
             usage_parts.append(f"Requests: {total.requests}")
-        
+
         # Cost
         if total.cost_usd is not None and total.cost_usd > 0:
             if total.cost_usd < 0.01:
-                cost_text = f"Cost: <$0.01"
+                cost_text = "Cost: <$0.01"
             else:
                 cost_text = f"Cost: ${total.cost_usd:.4f}"
             usage_parts.append(cost_text)
-        
+
         # Display usage info
         if usage_parts:
             usage_text = " • ".join(usage_parts)
@@ -387,32 +416,38 @@ Available commands:
         try:
             # Add 2 line breaks as requested for positioning
             self.console.print("\n")
-            
+
             # Show live status updates during the wait period
             with self.console.status("[bold blue]Processing message...") as status:
                 # Log user message to session
                 self.session_manager.log_user_message(message)
-                
+
+                # Check for compression after adding the new message (reactive compression)
+                await self.session_manager.compress_context_if_needed()
+
                 # Generate AI title for first user message (run in background)
-                if not hasattr(self, '_title_generated'):
+                if not hasattr(self, "_title_generated"):
                     self._title_generated = True
                     # Start title generation as background task - don't await
                     asyncio.create_task(self._background_title_generation())
-                
+
                 # Update status for the next phase (this is where the long delay happens)
                 status.update("[bold blue]Initializing AI agent (tools & model providers)...")
-                
+
+                # Prepare agent with compressed context if available
+                current_agent = self._prepare_agent_with_context()
+
                 # Start the streaming context but don't stream yet
-                stream_context = self.agent.run_stream(message, deps=self.deps)
+                stream_context = current_agent.run_stream(message, deps=self.deps)
                 result = await stream_context.__aenter__()
-                
+
                 # Update status one final time before streaming
                 status.update("[bold blue]Starting response stream...")
-            
+
             # Status is automatically cleared when exiting the status context
             # Now we can stream without the spinner interfering
             try:
-                # Display assistant name with proper line breaks  
+                # Display assistant name with proper line breaks
                 self.console.print()
                 self.console.print(f"[bold blue]{self.assistant_name}:[/bold blue]")
 
@@ -430,34 +465,69 @@ Available commands:
                     self.console.print(f"\n[red]Streaming error: {str(stream_error)}[/red]")
 
                 self.console.print()  # New line after response
-                
+
                 # Log usage and costs from this run
                 try:
                     run_usage = result.usage()
-                    model_name = getattr(result, 'model_name', None)
+                    model_name = getattr(result, "model_name", None)
                     if run_usage:
                         self.session_manager.log_run_usage(run_usage, model_name)
                 except Exception:
                     # If we can't get usage data, continue without cost tracking
                     pass
-                
+
                 # Log all Pydantic AI messages for complete context (includes user/assistant messages)
                 try:
                     all_messages = result.all_messages()
                     # Only log new messages (avoid duplicating across sessions)
-                    new_messages = [msg for msg in all_messages if not hasattr(self, '_last_message_count') or len(all_messages) > getattr(self, '_last_message_count', 0)]
+                    new_messages = [
+                        msg
+                        for msg in all_messages
+                        if not hasattr(self, "_last_message_count")
+                        or len(all_messages) > getattr(self, "_last_message_count", 0)
+                    ]
+                    
+                    print(f"[DEBUG] Response path: Pydantic messages - {len(all_messages)} total, {len(new_messages)} new")
+                    
+                    # Log new messages if we have them
                     if new_messages:
                         self.session_manager.log_pydantic_messages(new_messages)
+                        print(f"[DEBUG] Logged {len(new_messages)} new Pydantic messages")
+                    else:
+                        # Even if no "new" messages, we need to ensure current assistant response tokens are counted
+                        print(f"[DEBUG] No new messages, but ensuring current assistant response is counted")
+                        # Find the latest assistant response and log it for token counting
+                        from pydantic_ai.messages import ModelResponse
+                        assistant_responses = [msg for msg in all_messages if isinstance(msg, ModelResponse)]
+                        if assistant_responses:
+                            latest_response = assistant_responses[-1]
+                            self.session_manager.log_pydantic_messages([latest_response])
+                            print(f"[DEBUG] Force-logged latest assistant response for token counting")
+                    
+                    # ALWAYS check compression after assistant responses
+                    print(f"[DEBUG] Calling compression check after assistant response processing")
+                    await self.session_manager.compress_context_if_needed()
+                    
                     self._last_message_count = len(all_messages)
-                except Exception:
+                except Exception as e:
                     # If we can't get Pydantic messages, continue with basic logging
                     # Fallback to basic logging if Pydantic message logging fails
+                    print(f"[DEBUG] Response path: Fallback to basic logging due to exception: {e}")
                     if full_response:
                         self.session_manager.log_assistant_response(full_response)
+                        print(f"[DEBUG] Logged assistant response via fallback - calling compression check")
+                        # Check for compression after assistant response
+                        await self.session_manager.compress_context_if_needed()
+                    else:
+                        print(f"[DEBUG] No response content in fallback path")
             finally:
                 # Properly close the stream context
                 await stream_context.__aexit__(None, None, None)
-            
+                
+                # Safety net: Always check compression after any response processing
+                print(f"[DEBUG] Final safety net: checking compression after all response processing")
+                await self.session_manager.compress_context_if_needed()
+
             return full_response
 
         except KeyboardInterrupt:
@@ -469,11 +539,13 @@ Available commands:
             self.console.print()
             self.console.print(f"[bold blue]{self.assistant_name}:[/bold blue]")
             self.console.print(f"[red]Error: {str(e)}[/red]")
-            
+
             # Log error to session
             error_msg = f"Error: {str(e)}"
             self.session_manager.log_assistant_response(error_msg)
-            
+            # Check for compression after error response
+            await self.session_manager.compress_context_if_needed()
+
             return error_msg
 
     async def run_chat(self):
@@ -504,5 +576,5 @@ Available commands:
 
             # Show usage metadata after each interaction
             self.show_usage_metadata()
-            
+
             self.console.print()

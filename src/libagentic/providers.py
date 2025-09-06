@@ -74,7 +74,7 @@ def get_default_model(
     """
     # Ensure environment variables are loaded
     load_dotenv()
-    
+
     return FallbackModel(
         get_anthropic_model(anthropic_model_name),
         get_openai_model(openai_model_name),

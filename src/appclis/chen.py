@@ -13,6 +13,7 @@ from libchatinterface import ChatInterface
 load_dotenv()
 app = typer.Typer(pretty_exceptions_enable=False)
 TAVILY_API_KEY = environ.get("TAVILY_API_KEY")
+CONTEXT_WINDOW = int(environ.get("CONTEXT_WINDOW", "200000"))
 
 
 async def run():
@@ -20,7 +21,9 @@ async def run():
     agent = get_chen_agent()
     tavily_client = TavilyClient(api_key=TAVILY_API_KEY)
     deps = TavilyDeps(tavily_client=tavily_client)
-    chat_interface = ChatInterface(agent=agent, deps=deps, app_name="chen", assistant_name="Chen")
+    chat_interface = ChatInterface(
+        agent=agent, deps=deps, app_name="chen", assistant_name="Chen", context_window=CONTEXT_WINDOW
+    )
     await chat_interface.run_chat()
 
 

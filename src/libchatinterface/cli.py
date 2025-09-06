@@ -332,7 +332,7 @@ Available commands:
                 # Stream text output character by character, appending each delta
                 full_response = ""
                 try:
-                    async for text_delta in result.stream_text(delta=True):
+                    async for text_delta in result.stream_text(delta=True, debounce_by=0.01):
                         # Print each character as it arrives - Rich Console doesn't need flush
                         self.console.print(text_delta, end="")
                         full_response += text_delta

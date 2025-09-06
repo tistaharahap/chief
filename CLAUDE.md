@@ -9,6 +9,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 source .venv/bin/activate
 ```
 
+### Required Environment Variables
+```bash
+# OpenRouter API key (required) - Get from https://openrouter.ai/keys
+export OPENROUTER_API_KEY="your-openrouter-api-key-here"
+
+# Tavily API key (required for web search) - Get from https://tavily.com
+export TAVILY_API_KEY="your-tavily-api-key-here"
+```
+
+Or set them in the `.env` file:
+```env
+OPENROUTER_API_KEY=your-openrouter-api-key-here
+TAVILY_API_KEY=your-tavily-api-key-here
+```
+
 ### Code Quality
 ```bash
 # Lint and fix issues
@@ -46,15 +61,23 @@ This project implements AI agents using the Pydantic AI framework with two main 
 
 ### Core Structure
 - **src/appclis/**: CLI entry points using Typer framework
-- **src/libagentic/**: Core agent library with tools and MongoDB integration
+- **src/libagentic/**: Core agent library with tools, providers, and MongoDB integration
 - **src/libshared/**: Shared utilities, particularly MongoDB base classes
 
 ### Agent Architecture
 The project uses a factory pattern for agent creation:
 - `get_chief_agent()` and `get_chen_agent()` functions in `libagentic/agents.py`
 - Agents are configured with system prompts from `libagentic/prompts.py`
+- **Model Provider**: Uses OpenRouter for access to multiple LLM providers (Anthropic, OpenAI, etc.)
+- Provider configuration in `libagentic/providers.py` with OpenAI-compatible OpenRouter integration
 - Tools system provides web search (Tavily API) and datetime utilities
 - MongoDB persistence through Beanie ODM with async support
+
+### Model Configuration
+- **Default Model**: `anthropic/claude-3.5-sonnet` via OpenRouter
+- **Provider**: OpenRouter (https://openrouter.ai) for multi-provider access
+- **API Key**: Set `OPENROUTER_API_KEY` in `.env` file
+- **Available Models**: All OpenRouter-supported models (Anthropic, OpenAI, Google, etc.)
 
 ### Known Issues
 

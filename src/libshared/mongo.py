@@ -18,9 +18,7 @@ class SlugMixin:
         # Ensure this is used with a Beanie Document class
         cls = type(self)
         if not issubclass(cls, Document):
-            raise TypeError(
-                f"SlugMixin can only be used with Beanie Document classes, not {cls.__name__}"
-            )
+            raise TypeError(f"SlugMixin can only be used with Beanie Document classes, not {cls.__name__}")
 
         if self.slug is None:
             max_attempts = 10
@@ -42,12 +40,8 @@ class BaseMongoDocument(Document):
         default_factory=lambda: datetime.now(tz=UTC),
         description="The date and time the document was created",
     )
-    updated_at: datetime | None = Field(
-        None, description="The date and time the document was last updated"
-    )
-    deleted_at: datetime | None = Field(
-        None, description="The date and time the document was deleted"
-    )
+    updated_at: datetime | None = Field(None, description="The date and time the document was last updated")
+    deleted_at: datetime | None = Field(None, description="The date and time the document was deleted")
 
     @before_event(Replace, Save)
     def update_timestamp(self):

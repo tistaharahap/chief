@@ -2,6 +2,7 @@ import asyncio
 import contextlib
 
 import typer
+from rich.console import Console
 
 from libagentic.agents import get_chief_agent
 
@@ -15,8 +16,12 @@ async def run():
 
 @app.command()
 def main():
-    with contextlib.suppress(KeyboardInterrupt, SystemExit):
+    try:
         asyncio.run(run())
+    except KeyboardInterrupt:
+        # Clean exit on Ctrl+C without ugly traceback
+        console = Console()
+        console.print("\n\n[yellow]Goodbye! 👋[/yellow]")
 
 
 if __name__ == "__main__":

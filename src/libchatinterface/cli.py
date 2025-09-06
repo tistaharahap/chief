@@ -298,8 +298,11 @@ class ChatInterface:
         try:
             user_input = self.history_prompt.ask("[bold green]You[/bold green]")
             return user_input.strip()
-        except (KeyboardInterrupt, EOFError):
+        except EOFError:
             return "/quit"
+        except KeyboardInterrupt:
+            # Let KeyboardInterrupt propagate for immediate exit
+            raise
 
     def handle_command(self, user_input: str) -> bool:
         """Handle special commands. Returns False if should exit."""
@@ -330,6 +333,9 @@ Available commands:
                 return str(response.output)
             else:
                 return str(response)
+        except KeyboardInterrupt:
+            # Let KeyboardInterrupt propagate for immediate exit
+            raise
         except Exception as e:
             return f"Error: {str(e)}"
 
@@ -356,6 +362,9 @@ Available commands:
             with self.console.status(f"[bold green]{self.assistant_name} is thinking...", spinner="dots"):
                 try:
                     response = await self.send_message(user_input)
+                except KeyboardInterrupt:
+                    # Let KeyboardInterrupt propagate for immediate exit
+                    raise
                 except Exception as e:
                     response = f"Error communicating with agent: {str(e)}"
 

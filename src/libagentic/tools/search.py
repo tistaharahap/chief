@@ -10,7 +10,7 @@ async def web_search(
     ctx: RunContext[TavilyDeps],
     query: str,
     search_depth: Literal["basic", "advanced"] = None,
-    topic: Literal["general", "news", "finance" ] = None,
+    topic: Literal["general", "news", "finance"] = None,
     time_range: Literal["day", "week", "month", "year"] = None,
     start_date: str = None,
     end_date: str = None,

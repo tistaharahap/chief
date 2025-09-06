@@ -4,6 +4,7 @@ from os import environ
 
 import typer
 from dotenv import load_dotenv
+from rich.console import Console
 from tavily import TavilyClient
 
 from libagentic.agents import get_chen_agent
@@ -13,11 +14,12 @@ from libchatinterface import ChatInterface
 load_dotenv()
 app = typer.Typer(pretty_exceptions_enable=False)
 TAVILY_API_KEY = environ.get("TAVILY_API_KEY")
+OPENROUTER_MODEL = environ.get("OPENROUTER_MODEL", "anthropic/claude-3.5-sonnet")
 
 
 async def run():
     """Initialize and run the Chen chat interface."""
-    agent = get_chen_agent()
+    agent = get_chen_agent(model=OPENROUTER_MODEL)
     tavily_client = TavilyClient(api_key=TAVILY_API_KEY)
     deps = TavilyDeps(tavily_client=tavily_client)
 
@@ -27,8 +29,12 @@ async def run():
 
 @app.command()
 def main():
-    with contextlib.suppress(KeyboardInterrupt, SystemExit):
+    try:
         asyncio.run(run())
+    except KeyboardInterrupt:
+        # Clean exit on Ctrl+C without ugly traceback
+        console = Console()
+        console.print("\n\n[yellow]Goodbye! 👋[/yellow]")
 
 
 if __name__ == "__main__":

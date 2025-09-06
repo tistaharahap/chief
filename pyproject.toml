@@ -11,6 +11,10 @@ dependencies = [
     "typer>=0.17.4",
     "logfire>=4.4.0",
     "pydantic-graph>=1.0.1",
+    "beanie>=2.0.0",
+    "coolname>=2.2.0",
+    "tavily-python>=0.7.11",
+    "asyncer>=0.0.8",
 ]
 readme = "README.md"
 requires-python = ">= 3.8"
@@ -34,8 +38,10 @@ allow-direct-references = true
 [tool.hatch.build.targets.wheel]
 packages = [
     "src/chief",
-    "src/libagentic"
+    "src/libagentic",
+    "src/libshared",
 ]
 
 [project.scripts]
 chief = "appclis.chief:app"
+chen = "appclis.chen:app"

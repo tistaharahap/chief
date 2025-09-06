@@ -24,6 +24,7 @@ anthropic==0.66.0
     # via pydantic-ai-slim
 anyio==4.10.0
     # via anthropic
+    # via asyncer
     # via google-genai
     # via groq
     # via httpx
@@ -34,10 +35,14 @@ anyio==4.10.0
     # via starlette
 argcomplete==3.6.2
     # via pydantic-ai-slim
+asyncer==0.0.8
+    # via chief
 attrs==25.3.0
     # via aiohttp
     # via jsonschema
     # via referencing
+beanie==2.0.0
+    # via chief
 boto3==1.40.25
     # via pydantic-ai-slim
 botocore==1.40.25
@@ -52,16 +57,21 @@ certifi==2025.8.3
 charset-normalizer==3.4.3
     # via requests
 click==8.2.1
+    # via beanie
     # via typer
     # via uvicorn
 cohere==5.17.0
     # via pydantic-ai-slim
 colorama==0.4.6
     # via griffe
+coolname==2.2.0
+    # via chief
 distro==1.9.0
     # via anthropic
     # via groq
     # via openai
+dnspython==2.7.0
+    # via pymongo
 eval-type-backport==0.2.2
     # via mistralai
 executing==2.2.1
@@ -106,6 +116,7 @@ httpx==0.28.1
     # via openai
     # via pydantic-ai-slim
     # via pydantic-graph
+    # via tavily-python
 httpx-sse==0.4.0
     # via cohere
     # via mcp
@@ -133,6 +144,8 @@ jsonschema==4.25.1
     # via mcp
 jsonschema-specifications==2025.4.1
     # via jsonschema
+lazy-model==0.3.0
+    # via beanie
 logfire==4.4.0
     # via chief
     # via pydantic-ai-slim
@@ -206,10 +219,12 @@ pyasn1-modules==0.4.2
 pydantic==2.11.7
     # via ag-ui-protocol
     # via anthropic
+    # via beanie
     # via cohere
     # via genai-prices
     # via google-genai
     # via groq
+    # via lazy-model
     # via mcp
     # via mistralai
     # via openai
@@ -236,6 +251,8 @@ pydantic-settings==2.10.1
 pygments==2.19.2
     # via pytest
     # via rich
+pymongo==4.14.1
+    # via beanie
 pyperclip==1.9.0
     # via pydantic-ai-slim
 pytest==8.4.2
@@ -257,12 +274,16 @@ pyyaml==6.0.2
 referencing==0.36.2
     # via jsonschema
     # via jsonschema-specifications
+regex==2025.9.1
+    # via tiktoken
 requests==2.32.5
     # via cohere
     # via google-genai
     # via huggingface-hub
     # via opentelemetry-exporter-otlp-proto-http
     # via pydantic-ai-slim
+    # via tavily-python
+    # via tiktoken
 rich==14.1.0
     # via logfire
     # via pydantic-ai-slim
@@ -290,11 +311,15 @@ sse-starlette==3.0.2
 starlette==0.47.3
     # via mcp
     # via pydantic-ai-slim
+tavily-python==0.7.11
+    # via chief
 temporalio==1.17.0
     # via pydantic-ai-slim
 tenacity==9.1.2
     # via google-genai
     # via pydantic-ai-slim
+tiktoken==0.11.0
+    # via tavily-python
 tokenizers==0.22.0
     # via cohere
 tqdm==4.67.1
@@ -308,6 +333,7 @@ types-requests==2.32.4.20250809
     # via cohere
 typing-extensions==4.15.0
     # via anthropic
+    # via beanie
     # via cohere
     # via google-genai
     # via groq

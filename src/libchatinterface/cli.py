@@ -321,26 +321,43 @@ Available commands:
         return True
 
     async def send_message(self, message: str) -> str:
-        """Send message to agent and get response."""
+        """Send message to agent and get response using streaming."""
         try:
-            # Use the agent's run method with dependencies
-            response = await self.agent.run(message, deps=self.deps)
+            # Use the agent's streaming run method
+            async with self.agent.run_stream(message, deps=self.deps) as result:
+                # Display assistant name with proper line breaks
+                self.console.print()
+                self.console.print(f"[bold blue]{self.assistant_name}:[/bold blue]")
 
-            # Extract the actual message content from the agent response
-            if hasattr(response, "data"):
-                return str(response.data)
-            elif hasattr(response, "output"):
-                return str(response.output)
-            else:
-                return str(response)
+                # Stream text output character by character, appending each delta
+                full_response = ""
+                try:
+                    async for text_delta in result.stream_text(delta=True):
+                        # Print each character as it arrives - Rich Console doesn't need flush
+                        self.console.print(text_delta, end="")
+                        full_response += text_delta
+                except GeneratorExit:
+                    # Handle clean generator exit on Ctrl+C
+                    pass
+                except Exception as stream_error:
+                    self.console.print(f"\n[red]Streaming error: {str(stream_error)}[/red]")
+
+                self.console.print()  # New line after response
+                return full_response
+
         except KeyboardInterrupt:
             # Let KeyboardInterrupt propagate for immediate exit
+            self.console.print("\n[yellow]Interrupted by user[/yellow]")
             raise
         except Exception as e:
+            # Display error immediately instead of returning it
+            self.console.print()
+            self.console.print(f"[bold blue]{self.assistant_name}:[/bold blue]")
+            self.console.print(f"[red]Error: {str(e)}[/red]")
             return f"Error: {str(e)}"
 
     async def run_chat(self):
-        """Main chat loop."""
+        """Main chat loop with streaming support."""
         self.show_welcome()
 
         while self.running:
@@ -358,18 +375,11 @@ Available commands:
             # Add to history only when actually sending to agent
             self.history_manager.add_message(user_input)
 
-            # Show thinking indicator
-            with self.console.status(f"[bold green]{self.assistant_name} is thinking...", spinner="dots"):
-                try:
-                    response = await self.send_message(user_input)
-                except KeyboardInterrupt:
-                    # Let KeyboardInterrupt propagate for immediate exit
-                    raise
-                except Exception as e:
-                    response = f"Error communicating with agent: {str(e)}"
+            # Send message and stream response - errors are handled in send_message
+            try:
+                await self.send_message(user_input)
+            except KeyboardInterrupt:
+                # Let KeyboardInterrupt propagate for immediate exit
+                raise
 
-            # Display response
-            self.console.print()
-            self.console.print(f"[bold blue]{self.assistant_name}:[/bold blue]")
-            self.renderer.render(response)
             self.console.print()

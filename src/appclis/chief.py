@@ -1,5 +1,4 @@
 import asyncio
-import contextlib
 
 import typer
 from rich.console import Console

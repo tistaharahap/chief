@@ -4,9 +4,9 @@ Provider configurations for different AI model providers.
 
 from os import environ
 
+from pydantic_ai.models.anthropic import AnthropicModel, AnthropicModelName
 from pydantic_ai.models.fallback import FallbackModel
 from pydantic_ai.models.openai import OpenAIChatModel
-from pydantic_ai.models.anthropic import AnthropicModel, AnthropicModelName
 from pydantic_ai.providers.openai import OpenAIProvider
 
 
@@ -39,9 +39,7 @@ def get_openai_model(model_name: str = "gpt-5-2025-08-07") -> OpenAIChatModel:
     return OpenAIChatModel(model_name)
 
 
-def get_anthropic_model(
-    model_name: AnthropicModelName = "claude-sonnet-4-20250514"
-) -> AnthropicModel:
+def get_anthropic_model(model_name: AnthropicModelName = "claude-sonnet-4-20250514") -> AnthropicModel:
     """
     Create an Anthropic model using OpenRouter (since pydantic-ai doesn't have native Anthropic support).
 

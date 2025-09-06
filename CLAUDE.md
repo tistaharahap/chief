@@ -36,6 +36,10 @@ python src/appclis/chief.py --help
 python src/appclis/chen.py --help
 ```
 
+### Running Commands
+
+Always run commands with `rye run` if you want to access the virtual environment and dependencies.
+
 ## Architecture Overview
 
 This project implements AI agents using the Pydantic AI framework with two main CLI applications: `chief` and `chen`.

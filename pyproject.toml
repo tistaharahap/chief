@@ -15,6 +15,8 @@ dependencies = [
     "coolname>=2.2.0",
     "tavily-python>=0.7.11",
     "asyncer>=0.0.8",
+    "uvicorn>=0.35.0",
+    "python-dotenv>=1.1.1",
 ]
 readme = "README.md"
 requires-python = ">= 3.8"

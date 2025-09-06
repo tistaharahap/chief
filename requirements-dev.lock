@@ -264,6 +264,7 @@ python-dateutil==2.9.0.post0
     # via botocore
     # via mistralai
 python-dotenv==1.1.1
+    # via chief
     # via pydantic-settings
 python-multipart==0.0.20
     # via mcp
@@ -361,6 +362,7 @@ urllib3==2.5.0
     # via requests
     # via types-requests
 uvicorn==0.35.0
+    # via chief
     # via mcp
 wcwidth==0.2.13
     # via prompt-toolkit

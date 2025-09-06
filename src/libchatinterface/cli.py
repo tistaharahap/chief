@@ -281,6 +281,15 @@ class ChatInterface:
         self.history_manager = HistoryManager(app_name)
         self.history_prompt = RichHistoryPrompt(self.console, self.history_manager)
         self.running = True
+        
+        # Import here to avoid circular imports
+        from libchatinterface.session import SessionManager
+        self.session_manager = SessionManager(app_name)
+        
+        # Log system prompt if available
+        system_prompt = getattr(agent, 'system_prompt', None)
+        if system_prompt:
+            self.session_manager.log_system_prompt(system_prompt)
 
     def show_welcome(self):
         """Display welcome message."""
@@ -323,6 +332,19 @@ Available commands:
     async def send_message(self, message: str) -> str:
         """Send message to agent and get response using streaming."""
         try:
+            # Log user message to session
+            self.session_manager.log_user_message(message)
+            
+            # Generate AI title for first user message (async, don't wait)
+            if not hasattr(self, '_title_generated'):
+                self._title_generated = True
+                # Run title generation in background without blocking the conversation
+                try:
+                    await self.session_manager.update_title_with_ai()
+                except Exception:
+                    # Don't let title generation failures affect the main conversation
+                    pass
+            
             # Use the agent's streaming run method
             async with self.agent.run_stream(message, deps=self.deps) as result:
                 # Display assistant name with proper line breaks
@@ -343,6 +365,23 @@ Available commands:
                     self.console.print(f"\n[red]Streaming error: {str(stream_error)}[/red]")
 
                 self.console.print()  # New line after response
+                
+                # Log assistant response to session
+                if full_response:
+                    self.session_manager.log_assistant_response(full_response)
+                
+                # Also log all Pydantic AI messages for complete context
+                try:
+                    all_messages = result.all_messages()
+                    # Only log new messages (avoid duplicating what we just logged)
+                    new_messages = [msg for msg in all_messages if not hasattr(self, '_last_message_count') or len(all_messages) > getattr(self, '_last_message_count', 0)]
+                    if new_messages:
+                        self.session_manager.log_pydantic_messages(new_messages)
+                    self._last_message_count = len(all_messages)
+                except Exception:
+                    # If we can't get Pydantic messages, continue with basic logging
+                    pass
+                
                 return full_response
 
         except KeyboardInterrupt:
@@ -354,7 +393,12 @@ Available commands:
             self.console.print()
             self.console.print(f"[bold blue]{self.assistant_name}:[/bold blue]")
             self.console.print(f"[red]Error: {str(e)}[/red]")
-            return f"Error: {str(e)}"
+            
+            # Log error to session
+            error_msg = f"Error: {str(e)}"
+            self.session_manager.log_assistant_response(error_msg)
+            
+            return error_msg
 
     async def run_chat(self):
         """Main chat loop with streaming support."""

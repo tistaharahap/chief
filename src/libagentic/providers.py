@@ -4,6 +4,7 @@ Provider configurations for different AI model providers.
 
 from os import environ
 
+from dotenv import load_dotenv
 from pydantic_ai.models.anthropic import AnthropicModel, AnthropicModelName
 from pydantic_ai.models.fallback import FallbackModel
 from pydantic_ai.models.openai import OpenAIChatModel
@@ -71,6 +72,9 @@ def get_default_model(
     Returns:
         FallbackModel configured for the specified providers
     """
+    # Ensure environment variables are loaded
+    load_dotenv()
+    
     return FallbackModel(
         get_anthropic_model(anthropic_model_name),
         get_openai_model(openai_model_name),

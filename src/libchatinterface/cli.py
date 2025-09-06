@@ -1,5 +1,6 @@
 """Rich-based chat interface components with history support."""
-
+import asyncio
+import contextlib
 import json
 import os
 import re
@@ -313,6 +314,11 @@ class ChatInterface:
             # Let KeyboardInterrupt propagate for immediate exit
             raise
 
+    async def _background_title_generation(self) -> None:
+        """Generate AI title in background without blocking the main conversation."""
+        with contextlib.suppress(Exception):
+            await self.session_manager.update_title_with_ai()
+
     def handle_command(self, user_input: str) -> bool:
         """Handle special commands. Returns False if should exit."""
         if user_input.lower() in ["/quit", "/exit", "quit", "exit"]:
@@ -335,15 +341,11 @@ Available commands:
             # Log user message to session
             self.session_manager.log_user_message(message)
             
-            # Generate AI title for first user message (async, don't wait)
+            # Generate AI title for first user message (run in background)
             if not hasattr(self, '_title_generated'):
                 self._title_generated = True
-                # Run title generation in background without blocking the conversation
-                try:
-                    await self.session_manager.update_title_with_ai()
-                except Exception:
-                    # Don't let title generation failures affect the main conversation
-                    pass
+                # Start title generation as background task - don't await
+                asyncio.create_task(self._background_title_generation())
             
             # Use the agent's streaming run method
             async with self.agent.run_stream(message, deps=self.deps) as result:

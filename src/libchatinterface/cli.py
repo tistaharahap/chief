@@ -45,7 +45,20 @@ class HistoryManager:
                         # Parse the JSON line to extract the user message
                         data = json.loads(line)
                         if data.get("type") == "user_prompt" and "content" in data:
-                            self.history.append(data["content"])
+                            # Support both old and new formats
+                            content = data["content"]
+
+                            # Check if we have valid model_request data (new format)
+                            model_request = data.get("model_request")
+                            if isinstance(model_request, dict):
+                                # New format with proper JSON serialization
+                                self.history.append(content)
+                            elif isinstance(model_request, str) and model_request.startswith("ModelRequest("):
+                                # Old format with string representation - still load the content
+                                self.history.append(content)
+                            else:
+                                # Fallback: just use content
+                                self.history.append(content)
         except Exception:
             # If there's any error loading history, start fresh
             self.history = []
@@ -56,14 +69,39 @@ class HistoryManager:
             # Create ModelRequest for storage
             model_request = ModelRequest.user_text_prompt(message)
 
+            # Manually serialize ModelRequest to JSON by extracting data
+            try:
+                model_request_data = {"kind": getattr(model_request, "kind", "user"), "parts": []}
+
+                # Serialize each part
+                for part in model_request.parts:
+                    part_data = {
+                        "part_kind": getattr(part, "part_kind", "user_prompt"),
+                        "content": part.content,
+                        "timestamp": part.timestamp.isoformat() if part.timestamp else None,
+                    }
+                    model_request_data["parts"].append(part_data)
+
+            except Exception:
+                # Fallback if serialization fails
+                model_request_data = {
+                    "kind": "user",
+                    "parts": [
+                        {
+                            "part_kind": "user_prompt",
+                            "content": message,
+                            "timestamp": datetime.now(UTC).isoformat(),
+                        }
+                    ],
+                    "serialization_fallback": True,
+                }
+
             # Convert to a serializable format
             history_entry = {
                 "timestamp": datetime.now(UTC).isoformat(),
                 "type": "user_prompt",
                 "content": message,
-                "model_request": model_request.model_dump()
-                if hasattr(model_request, "model_dump")
-                else str(model_request),
+                "model_request": model_request_data,
             }
 
             # Add to memory
@@ -74,7 +112,7 @@ class HistoryManager:
                 with self.history_file.open("a", encoding="utf-8") as f:
                     f.write(json.dumps(history_entry, ensure_ascii=False) + "\n")
             except Exception:
-                pass  # Silently fail if can't write to file
+                pass  # Silently fail if can't write to file  # Silently fail if can't write to file  # Silently fail if can't write to file
 
     def get_history(self) -> list[str]:
         """Get the command history list."""

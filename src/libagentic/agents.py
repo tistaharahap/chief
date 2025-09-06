@@ -12,9 +12,6 @@ from libagentic.tools.time import current_datetime
 
 
 def get_chief_agent(
-    model: Annotated[
-        str | None, Doc("""The OpenRouter model to use (e.g. 'anthropic/claude-3.5-sonnet', 'openai/gpt-4o')""")
-    ] = None,
     mcps: Annotated[list[MCPServer], Doc("""List of MCP servers to connect the agent to""")] = None,
     temperature: Annotated[
         float, Doc("""The temperature to use for the model, the lower it is, the less adventurous the model will be""")
@@ -24,7 +21,6 @@ def get_chief_agent(
     Returns the chief agent using OpenRouter for model access.
 
     Args:
-        model (str, optional): The OpenRouter model to use. Defaults to "anthropic/claude-3.5-sonnet".
         mcps (list[MCPServer] | None, optional): List of MCP servers to connect the agent to. Defaults to None.
         temperature (float, optional): The temperature to use. Defaults to 0.2.
 
@@ -32,10 +28,10 @@ def get_chief_agent(
         Agent: The chief agent
     """
     settings = ModelSettings(temperature=temperature)
-    openrouter_model = get_default_model(model)
+    fallback_model = get_default_model()
 
     return Agent(
-        openrouter_model,
+        fallback_model,
         name="Chief",
         system_prompt=CHIEF_SYSTEM_PROMPT,
         mcp_servers=mcps,
@@ -44,9 +40,6 @@ def get_chief_agent(
 
 
 def get_chen_agent(
-    model: Annotated[
-        str | None, Doc("""The OpenRouter model to use (e.g. 'anthropic/claude-3.5-sonnet', 'openai/gpt-4o')""")
-    ] = None,
     mcps: Annotated[list[MCPServer], Doc("""List of MCP servers to connect the agent to""")] = None,
     temperature: Annotated[
         float, Doc("""The temperature to use for the model, the lower it is, the less adventurous the model will be""")
@@ -56,7 +49,6 @@ def get_chen_agent(
     Returns the Chen agent using OpenRouter for model access. Web search is enabled by default using the Tavily tool.
 
     Args:
-        model (str, optional): The OpenRouter model to use. Defaults to "anthropic/claude-3.5-sonnet".
         mcps (list[MCPServer] | None, optional): List of MCP servers to connect the agent to. Defaults to None.
         temperature (float, optional): The temperature to use. Defaults to 0.2.
 
@@ -64,10 +56,10 @@ def get_chen_agent(
         Agent: The Chen agent
     """
     settings = ModelSettings(temperature=temperature)
-    openrouter_model = get_default_model(model)
+    fallback_model = get_default_model()
 
     return Agent(
-        openrouter_model,
+        fallback_model,
         name="Chen",
         system_prompt=CHEN_SYSTEM_PROMPT,
         mcp_servers=mcps,

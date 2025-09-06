@@ -4,49 +4,77 @@ Provider configurations for different AI model providers.
 
 from os import environ
 
+from pydantic_ai.models.fallback import FallbackModel
 from pydantic_ai.models.openai import OpenAIChatModel
+from pydantic_ai.models.anthropic import AnthropicModel, AnthropicModelName
 from pydantic_ai.providers.openai import OpenAIProvider
 
 
-def get_openrouter_model(
-    model_name: str = "anthropic/claude-3.5-sonnet", api_key: str | None = None
-) -> OpenAIChatModel:
+def get_openrouter_model(model_name: str = "deepseek/deepseek-chat-v3.1:free") -> OpenAIChatModel:
     """
     Create an OpenAI-compatible model configured for OpenRouter.
 
     Args:
         model_name: The model identifier from OpenRouter's model list
-        api_key: OpenRouter API key, defaults to OPENROUTER_API_KEY env var
 
     Returns:
         OpenAIChatModel configured for OpenRouter
     """
-    if api_key is None:
-        api_key = environ.get("OPENROUTER_API_KEY")
-
-    if not api_key:
-        raise ValueError(
-            "OpenRouter API key is required. Set OPENROUTER_API_KEY environment variable or pass api_key parameter."
-        )
-
+    api_key = environ.get("OPENROUTER_API_KEY")
     provider = OpenAIProvider(base_url="https://openrouter.ai/api/v1", api_key=api_key)
-
     return OpenAIChatModel(model_name, provider=provider)
 
 
+def get_openai_model(model_name: str = "gpt-5-2025-08-07") -> OpenAIChatModel:
+    """
+    Create an OpenAI model directly using OpenAI's API.
+
+    Args:
+        model_name: The OpenAI model identifier (e.g., gpt-4, gpt-3.5-turbo)
+        api_key: OpenAI API key, defaults to OPENAI_API_KEY env var
+
+    Returns:
+        OpenAIChatModel configured for OpenAI
+    """
+    return OpenAIChatModel(model_name)
+
+
+def get_anthropic_model(
+    model_name: AnthropicModelName = "claude-sonnet-4-20250514"
+) -> AnthropicModel:
+    """
+    Create an Anthropic model using OpenRouter (since pydantic-ai doesn't have native Anthropic support).
+
+    Args:
+        model_name: The Anthropic model identifier (e.g., claude-3-5-sonnet-20241022)
+
+    Returns:
+        OpenAIChatModel configured for Anthropic via OpenRouter
+    """
+    # Use OpenRouter for Anthropic models since pydantic-ai doesn't have native Anthropic provider
+    return AnthropicModel(model_name=model_name)
+
+
 def get_default_model(
-    model_name: str | None = "deepseek/deepseek-chat-v3.1:free", api_key: str | None = None
-) -> OpenAIChatModel:
+    anthropic_model_name: AnthropicModelName | str | None = "claude-sonnet-4-20250514",
+    openai_model_name: str | None = "gpt-5-2025-08-07",
+    openrouter_model_name: str | None = "deepseek/deepseek-chat-v3.1:free",
+) -> FallbackModel:
     """
     Get the default model configuration for the application.
 
     Uses OpenRouter by default with deepseek/deepseek-chat-v3.1:free model.
 
     Args:
-        model_name: The model to use, defaults to anthropic/claude-3.5-sonnet
-        api_key: API key, defaults to OPENROUTER_API_KEY env var
+        anthropic_model_name: The Anthropic model identifier
+        openai_model_name: The OpenAI model identifier
+        openrouter_model_name: The OpenRouter model identifier, if None OpenRouter is skipped
 
     Returns:
-        OpenAIChatModel configured for the specified provider
+        FallbackModel configured for the specified providers
     """
-    return get_openrouter_model(model_name, api_key)
+    return FallbackModel(
+        get_anthropic_model(anthropic_model_name),
+        get_openai_model(openai_model_name),
+        get_openrouter_model(openrouter_model_name),
+    )

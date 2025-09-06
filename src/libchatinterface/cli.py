@@ -338,18 +338,34 @@ Available commands:
     async def send_message(self, message: str) -> str:
         """Send message to agent and get response using streaming."""
         try:
-            # Log user message to session
-            self.session_manager.log_user_message(message)
+            # Add 2 line breaks as requested for positioning
+            self.console.print("\n")
             
-            # Generate AI title for first user message (run in background)
-            if not hasattr(self, '_title_generated'):
-                self._title_generated = True
-                # Start title generation as background task - don't await
-                asyncio.create_task(self._background_title_generation())
+            # Show live status updates during the wait period
+            with self.console.status("[bold blue]Processing message...") as status:
+                # Log user message to session
+                self.session_manager.log_user_message(message)
+                
+                # Generate AI title for first user message (run in background)
+                if not hasattr(self, '_title_generated'):
+                    self._title_generated = True
+                    # Start title generation as background task - don't await
+                    asyncio.create_task(self._background_title_generation())
+                
+                # Update status for the next phase (this is where the long delay happens)
+                status.update("[bold blue]Initializing AI agent (tools & model providers)...")
+                
+                # Start the streaming context but don't stream yet
+                stream_context = self.agent.run_stream(message, deps=self.deps)
+                result = await stream_context.__aenter__()
+                
+                # Update status one final time before streaming
+                status.update("[bold blue]Starting response stream...")
             
-            # Use the agent's streaming run method
-            async with self.agent.run_stream(message, deps=self.deps) as result:
-                # Display assistant name with proper line breaks
+            # Status is automatically cleared when exiting the status context
+            # Now we can stream without the spinner interfering
+            try:
+                # Display assistant name with proper line breaks  
                 self.console.print()
                 self.console.print(f"[bold blue]{self.assistant_name}:[/bold blue]")
 
@@ -383,8 +399,11 @@ Available commands:
                 except Exception:
                     # If we can't get Pydantic messages, continue with basic logging
                     pass
-                
-                return full_response
+            finally:
+                # Properly close the stream context
+                await stream_context.__aexit__(None, None, None)
+            
+            return full_response
 
         except KeyboardInterrupt:
             # Let KeyboardInterrupt propagate for immediate exit

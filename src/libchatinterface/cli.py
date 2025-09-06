@@ -487,45 +487,37 @@ Available commands:
                         or len(all_messages) > getattr(self, "_last_message_count", 0)
                     ]
                     
-                    print(f"[DEBUG] Response path: Pydantic messages - {len(all_messages)} total, {len(new_messages)} new")
                     
                     # Log new messages if we have them
                     if new_messages:
                         self.session_manager.log_pydantic_messages(new_messages)
-                        print(f"[DEBUG] Logged {len(new_messages)} new Pydantic messages")
                     else:
                         # Even if no "new" messages, we need to ensure current assistant response tokens are counted
-                        print(f"[DEBUG] No new messages, but ensuring current assistant response is counted")
                         # Find the latest assistant response and log it for token counting
                         from pydantic_ai.messages import ModelResponse
                         assistant_responses = [msg for msg in all_messages if isinstance(msg, ModelResponse)]
                         if assistant_responses:
                             latest_response = assistant_responses[-1]
                             self.session_manager.log_pydantic_messages([latest_response])
-                            print(f"[DEBUG] Force-logged latest assistant response for token counting")
                     
                     # ALWAYS check compression after assistant responses
-                    print(f"[DEBUG] Calling compression check after assistant response processing")
                     await self.session_manager.compress_context_if_needed()
                     
                     self._last_message_count = len(all_messages)
                 except Exception as e:
                     # If we can't get Pydantic messages, continue with basic logging
                     # Fallback to basic logging if Pydantic message logging fails
-                    print(f"[DEBUG] Response path: Fallback to basic logging due to exception: {e}")
                     if full_response:
                         self.session_manager.log_assistant_response(full_response)
-                        print(f"[DEBUG] Logged assistant response via fallback - calling compression check")
                         # Check for compression after assistant response
                         await self.session_manager.compress_context_if_needed()
                     else:
-                        print(f"[DEBUG] No response content in fallback path")
+                        pass
             finally:
                 # Properly close the stream context
                 await stream_context.__aexit__(None, None, None)
                 
                 # Safety net: Always check compression after any response processing
-                print(f"[DEBUG] Final safety net: checking compression after all response processing")
                 await self.session_manager.compress_context_if_needed()
 
             return full_response

@@ -372,7 +372,6 @@ class SessionManager:
         # Use actual token usage from cost tracking (more accurate than estimation)
         if hasattr(self.session_costs, 'total_usage') and self.session_costs.total_usage.total_tokens > 0:
             actual_tokens = self.session_costs.total_usage.total_tokens
-            print(f"[DEBUG] Using actual LLM token usage: {actual_tokens:,} tokens")
             return actual_tokens
         
         # Fallback to message estimation if no usage data available
@@ -384,7 +383,6 @@ class SessionManager:
         if self.compressed_context:
             total += self.estimate_tokens(self.compressed_context)
 
-        print(f"[DEBUG] Using estimated token count: {total:,} tokens (no actual usage data)")
         return total
 
     def should_compress_context(self) -> bool:
@@ -392,9 +390,6 @@ class SessionManager:
         total_tokens = self.get_total_context_tokens()
         threshold = self.context_window * 0.9
         should_compress = total_tokens >= threshold
-        
-        # Debug output to help troubleshoot
-        print(f"[DEBUG] Compression check: {total_tokens:,} tokens / {self.context_window:,} limit (threshold: {threshold:,.0f}) → {'COMPRESS' if should_compress else 'OK'}")
         
         return should_compress
 
@@ -405,29 +400,40 @@ class SessionManager:
 
         # Import here to avoid circular imports
         from libagentic.agents import get_compression_agent
+        from rich.progress import Progress, SpinnerColumn, TextColumn
 
-        # Prepare conversation for compression (preserve last 3 messages - Option A)
+        # Get compression metrics
         recent_preserve_count = 3
         messages_to_compress = (
             self.messages[:-recent_preserve_count] if len(self.messages) > recent_preserve_count else []
         )
 
         if not messages_to_compress:
+            print("⚠️  No messages to compress")
             return
 
-        # Format conversation for compression
-        conversation_text = self._format_messages_for_compression(messages_to_compress)
+        # Simple transient indeterminate progress that disappears when done
+        progress = Progress(
+            SpinnerColumn(),
+            TextColumn("🗜️  Compressing conversation..."),
+            transient=True  # Progress disappears after completion
+        )
 
-        # Compress using dedicated agent
-        compression_agent = get_compression_agent()
-        result = await compression_agent.run(f"Compress this conversation:\n\n{conversation_text}")
+        with progress:
+            # Single indeterminate task
+            task = progress.add_task("", total=None)  # Indeterminate progress
+            
+            # Format conversation for compression
+            conversation_text = self._format_messages_for_compression(messages_to_compress)
+            
+            # Get compression agent and perform compression
+            compression_agent = get_compression_agent()
+            result = await compression_agent.run(f"Compress this conversation:\n\n{conversation_text}")
+            
+            # Store compressed context and remove compressed messages
+            self.compressed_context = result.output.strip()
+            self.messages = self.messages[-recent_preserve_count:]  # Keep only recent messages
 
-        # Store compressed context and remove compressed messages
-        self.compressed_context = result.output.strip()
-        self.messages = self.messages[-recent_preserve_count:]  # Keep only recent messages
-
-        # Debug output
-        print(f"[DEBUG] COMPRESSION COMPLETED: Compressed {len(messages_to_compress)} messages, kept {recent_preserve_count} recent messages")
 
         # Log compression event
         self._log_compression_event(len(messages_to_compress))

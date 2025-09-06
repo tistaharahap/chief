@@ -18,6 +18,8 @@ from rich.panel import Panel
 from rich.prompt import Prompt
 from rich.text import Text
 
+from libchatinterface.costs import format_token_count
+
 
 class HistoryManager:
     """Manages command history storage using Pydantic ModelRequest format."""
@@ -319,6 +321,51 @@ class ChatInterface:
         with contextlib.suppress(Exception):
             await self.session_manager.update_title_with_ai()
 
+    def show_usage_metadata(self) -> None:
+        """Display session usage metadata at bottom of interface."""
+        # Only show if we have messages
+        if self.session_manager.message_count == 0:
+            return
+            
+        # Get session costs
+        session_costs = self.session_manager.session_costs
+        total = session_costs.total_usage
+        
+        # Don't show if no usage data yet
+        if total.total_tokens == 0:
+            return
+        
+        # Create subtle horizontal divider
+        self.console.rule(style="dim")
+        
+        # Format usage information
+        usage_parts = []
+        
+        # Tokens
+        if total.input_tokens > 0 or total.output_tokens > 0:
+            tokens_text = f"Tokens: {format_token_count(total.input_tokens)} in, {format_token_count(total.output_tokens)} out"
+            if total.cached_tokens > 0:
+                tokens_text += f", {format_token_count(total.cached_tokens)} cached"
+            tokens_text += f" ({format_token_count(total.total_tokens)} total)"
+            usage_parts.append(tokens_text)
+        
+        # Requests
+        if total.requests > 0:
+            usage_parts.append(f"Requests: {total.requests}")
+        
+        # Cost
+        if total.cost_usd is not None and total.cost_usd > 0:
+            if total.cost_usd < 0.01:
+                cost_text = f"Cost: <$0.01"
+            else:
+                cost_text = f"Cost: ${total.cost_usd:.4f}"
+            usage_parts.append(cost_text)
+        
+        # Display usage info
+        if usage_parts:
+            usage_text = " • ".join(usage_parts)
+            self.console.print(f"[dim]{usage_text}[/dim]")
+
     def handle_command(self, user_input: str) -> bool:
         """Handle special commands. Returns False if should exit."""
         if user_input.lower() in ["/quit", "/exit", "quit", "exit"]:
@@ -384,10 +431,6 @@ Available commands:
 
                 self.console.print()  # New line after response
                 
-                # Log assistant response to session
-                if full_response:
-                    self.session_manager.log_assistant_response(full_response)
-                
                 # Log usage and costs from this run
                 try:
                     run_usage = result.usage()
@@ -398,17 +441,19 @@ Available commands:
                     # If we can't get usage data, continue without cost tracking
                     pass
                 
-                # Also log all Pydantic AI messages for complete context
+                # Log all Pydantic AI messages for complete context (includes user/assistant messages)
                 try:
                     all_messages = result.all_messages()
-                    # Only log new messages (avoid duplicating what we just logged)
+                    # Only log new messages (avoid duplicating across sessions)
                     new_messages = [msg for msg in all_messages if not hasattr(self, '_last_message_count') or len(all_messages) > getattr(self, '_last_message_count', 0)]
                     if new_messages:
                         self.session_manager.log_pydantic_messages(new_messages)
                     self._last_message_count = len(all_messages)
                 except Exception:
                     # If we can't get Pydantic messages, continue with basic logging
-                    pass
+                    # Fallback to basic logging if Pydantic message logging fails
+                    if full_response:
+                        self.session_manager.log_assistant_response(full_response)
             finally:
                 # Properly close the stream context
                 await stream_context.__aexit__(None, None, None)
@@ -457,4 +502,7 @@ Available commands:
                 # Let KeyboardInterrupt propagate for immediate exit
                 raise
 
+            # Show usage metadata after each interaction
+            self.show_usage_metadata()
+            
             self.console.print()

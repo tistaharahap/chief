@@ -167,6 +167,23 @@ def add_usage_to_session(session_costs: SessionCosts, usage_costs: UsageCosts) -
             model_costs.cost_usd += usage_costs.cost_usd
 
 
+def format_token_count(count: int) -> str:
+    """Format token count with k/M notation for readability.
+    
+    Examples:
+        1234 -> "1.2k"
+        31233 -> "31.2k"  
+        1234567 -> "1.2M"
+        5 -> "5"
+    """
+    if count < 1000:
+        return str(count)
+    elif count < 1000000:
+        return f"{count/1000:.1f}k"
+    else:
+        return f"{count/1000000:.1f}M"
+
+
 def format_session_costs_for_metadata(session_costs: SessionCosts) -> Dict:
     """Format SessionCosts for inclusion in metadata.json.
     

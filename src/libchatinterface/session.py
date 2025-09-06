@@ -79,6 +79,16 @@ class SessionManager:
             result = await title_agent.run(f"Generate a title for this message: {message}")
             generated_title = result.output.strip()
             
+            # Track usage from title generation
+            try:
+                title_usage = result.usage()
+                title_model = getattr(result, 'model_name', None)
+                if title_usage:
+                    self.log_run_usage(title_usage, title_model)
+            except Exception:
+                # If we can't get usage data, continue without tracking
+                pass
+            
             # Remove quotes if present
             if generated_title.startswith('"') and generated_title.endswith('"'):
                 generated_title = generated_title[1:-1].strip()

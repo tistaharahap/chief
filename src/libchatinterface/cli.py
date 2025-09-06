@@ -388,6 +388,16 @@ Available commands:
                 if full_response:
                     self.session_manager.log_assistant_response(full_response)
                 
+                # Log usage and costs from this run
+                try:
+                    run_usage = result.usage()
+                    model_name = getattr(result, 'model_name', None)
+                    if run_usage:
+                        self.session_manager.log_run_usage(run_usage, model_name)
+                except Exception:
+                    # If we can't get usage data, continue without cost tracking
+                    pass
+                
                 # Also log all Pydantic AI messages for complete context
                 try:
                     all_messages = result.all_messages()

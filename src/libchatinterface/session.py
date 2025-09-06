@@ -7,7 +7,15 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from pydantic_ai.messages import ModelMessage, ModelRequest, ModelResponse
+from pydantic_ai.usage import RunUsage
 from pydantic_core import to_jsonable_python
+
+from libchatinterface.costs import (
+    SessionCosts, 
+    calculate_usage_cost, 
+    add_usage_to_session,
+    format_session_costs_for_metadata
+)
 
 
 class SessionManager:
@@ -35,6 +43,9 @@ class SessionManager:
         # Title caching - only generate once
         self._session_title: Optional[str] = None
         self._title_generated = False
+        
+        # Cost tracking
+        self.session_costs = SessionCosts()
         
         # Create session directory
         self._create_session_directory()
@@ -142,7 +153,8 @@ class SessionManager:
                 "title": current_title,
                 "created_timestamp": self.session_timestamp.replace("_", ":"),  # Convert back to proper ISO format
                 "message_count": self.message_count,
-                "last_message_timestamp": self.last_message_timestamp
+                "last_message_timestamp": self.last_message_timestamp,
+                "usage": format_session_costs_for_metadata(self.session_costs)
             }
             
             with self.metadata_file.open("w", encoding="utf-8") as f:
@@ -162,6 +174,22 @@ class SessionManager:
             # If AI title generation fails completely, use fallback
             fallback_title = self._extract_title_fallback(self.first_user_message)
             self._update_metadata(title=fallback_title)
+
+    def log_run_usage(self, usage: RunUsage, model_name: Optional[str] = None) -> None:
+        """Log token usage and costs from a Pydantic AI run.
+        
+        Args:
+            usage: RunUsage object from Pydantic AI result
+            model_name: Name of the model used (for cost calculation)
+        """
+        # Calculate costs for this usage
+        usage_costs = calculate_usage_cost(usage, model_name)
+        
+        # Add to session totals
+        add_usage_to_session(self.session_costs, usage_costs)
+        
+        # Update metadata to reflect new costs
+        self._update_metadata()
 
     def log_system_prompt(self, system_prompt: str) -> None:
         """Log the system prompt as the first message in the session.

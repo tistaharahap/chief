@@ -48,7 +48,7 @@ uvx --python 3.13 --from chief-ai chen --help
 uvx --python 3.13 --from chief-ai chen
 ```
 
-### Installation
+### Installation (for development)
 
 ```bash
 # Clone and setup
@@ -58,22 +58,6 @@ source .venv/bin/activate
 
 # Install dependencies
 rye sync
-```
-
-### First Run (Chen)
-
-```bash
-# Launch Chen with automatic onboarding
-rye run chen
-```
-
-Chen will guide you through interactive setup to configure your API keys and preferences.
-
-### First Run (Chief)
-
-```bash
-# Launch Chief
-rye run chief
 ```
 
 ## LLM Providers & Models Priority

@@ -20,6 +20,11 @@ from libchatinterface.costs import (
     format_session_costs_for_metadata,
 )
 
+# Additional imports for session resumption
+from rich.console import Console
+from rich.panel import Panel
+from rich.text import Text
+
 
 class SessionManager:
     """Manages chat sessions with complete message history and metadata tracking."""
@@ -477,3 +482,359 @@ class SessionManager:
         self.last_message_timestamp = timestamp
         self._log_message_to_history(compression_data)
         self._update_metadata()
+
+
+class SessionLister:
+    """Handles scanning and displaying past chat sessions for resumption."""
+    
+    def __init__(self, app_name: str = "chatinterface"):
+        self.app_name = app_name
+        self.sessions_dir = Path.home() / f".{app_name}" / "sessions"
+    
+    def get_available_sessions(self) -> list[dict[str, Any]]:
+        """Scan for available sessions and return metadata sorted by creation time (newest first)."""
+        sessions = []
+        
+        if not self.sessions_dir.exists():
+            return sessions
+            
+        for session_dir in self.sessions_dir.iterdir():
+            if not session_dir.is_dir():
+                continue
+                
+            metadata_file = session_dir / "metadata.json"
+            if not metadata_file.exists():
+                continue
+                
+            try:
+                with metadata_file.open("r", encoding="utf-8") as f:
+                    metadata = json.load(f)
+                
+                # Add session directory path for resumption
+                metadata["session_dir"] = str(session_dir)
+                metadata["session_timestamp"] = session_dir.name
+                sessions.append(metadata)
+                
+            except (json.JSONDecodeError, OSError):
+                # Skip corrupted or inaccessible sessions
+                continue
+        
+        # Sort by created_timestamp (newest first)
+        sessions.sort(key=lambda s: s.get("created_timestamp", ""), reverse=True)
+        return sessions
+    
+    def format_session_display(self, session: dict[str, Any]) -> str:
+        """Format session metadata for display in the selection interface."""
+        title = session.get("title", "Untitled Session")
+        created_timestamp = session.get("created_timestamp", "")
+        message_count = session.get("message_count", 0)
+        
+        # Format timestamp for human readability
+        try:
+            from datetime import datetime
+            created_dt = datetime.fromisoformat(created_timestamp.replace("Z", "+00:00"))
+            now = datetime.now(created_dt.tzinfo)
+            time_diff = now - created_dt
+            
+            if time_diff.days > 0:
+                if time_diff.days == 1:
+                    time_str = "1 day ago"
+                else:
+                    time_str = f"{time_diff.days} days ago"
+            elif time_diff.seconds > 3600:
+                hours = time_diff.seconds // 3600
+                time_str = f"{hours} hour{'s' if hours != 1 else ''} ago"
+            elif time_diff.seconds > 60:
+                minutes = time_diff.seconds // 60
+                time_str = f"{minutes} minute{'s' if minutes != 1 else ''} ago"
+            else:
+                time_str = "Just now"
+        except (ValueError, AttributeError):
+            time_str = "Unknown time"
+        
+        # Format display line
+        return f"{title:<50} ({time_str}, {message_count} message{'s' if message_count != 1 else ''})"
+    
+    def show_session_selection(self, console: Console) -> str | None:
+        """Display interactive session selection interface using Rich.
+        
+        Returns:
+            Selected session directory path, or None if cancelled
+        """
+        sessions = self.get_available_sessions()
+        
+        if not sessions:
+            console.print("[yellow]No previous sessions found.[/yellow]")
+            return None
+        
+        console.print()
+        console.print("[bold blue]Resume Session[/bold blue]")
+        console.print("[dim]Select a session to resume:[/dim]")
+        console.print()
+        
+        # Display sessions with numbers
+        for i, session in enumerate(sessions, 1):
+            display_text = self.format_session_display(session)
+            console.print(f"[bold cyan]{i}.[/bold cyan] {display_text}")
+        
+        console.print()
+        console.print("[dim]Enter session number (1-{}) or press Enter to cancel:[/dim]".format(len(sessions)))
+        
+        try:
+            choice = console.input("[bold green]Select session: [/bold green]").strip()
+            
+            if not choice:  # Empty input - cancel
+                return None
+                
+            session_num = int(choice)
+            if 1 <= session_num <= len(sessions):
+                return sessions[session_num - 1]["session_dir"]
+            else:
+                console.print(f"[red]Invalid selection. Please choose 1-{len(sessions)}[/red]")
+                return None
+                
+        except (ValueError, KeyboardInterrupt):
+            return None
+        
+        console.print()
+        console.print("[bold blue]Resume Session[/bold blue]")
+        console.print("[dim]Use ↑/↓ arrows to navigate, Enter to select, Esc to cancel[/dim]")
+        console.print()
+        
+        selected_index = 0
+        
+        # Use alternate screen mode for clean interface
+        with console.screen() as screen:
+            while True:
+                # Clear and redraw
+                screen.update(self._render_session_list(sessions, selected_index))
+                
+                # Get keyboard input
+                try:
+                    import getch
+                    key = getch.getch()
+                except ImportError:
+                    # Fallback to simple input if getch not available
+                    console.print("\n[yellow]Arrow key navigation not available. Enter session number (1-{}):[/yellow]".format(len(sessions)))
+                    try:
+                        choice = int(console.input()) - 1
+                        if 0 <= choice < len(sessions):
+                            return sessions[choice]["session_dir"]
+                    except (ValueError, KeyboardInterrupt):
+                        pass
+                    return None
+                
+                # Handle key input
+                if key == '\x1b':  # Escape sequence
+                    # Check for arrow keys
+                    try:
+                        key2 = getch.getch()
+                        if key2 == '[':
+                            key3 = getch.getch()
+                            if key3 == 'A':  # Up arrow
+                                selected_index = max(0, selected_index - 1)
+                            elif key3 == 'B':  # Down arrow
+                                selected_index = min(len(sessions) - 1, selected_index + 1)
+                        else:
+                            # Pure escape - cancel
+                            return None
+                    except ImportError:
+                        return None
+                elif key == '\r' or key == '\n':  # Enter
+                    return sessions[selected_index]["session_dir"]
+                elif key == '\x03':  # Ctrl+C
+                    raise KeyboardInterrupt()
+    
+
+
+
+class ResumableSessionManager(SessionManager):
+    """Extended SessionManager that can load from existing sessions."""
+    
+    @classmethod
+    def from_existing_session(cls, session_dir: str, app_name: str = "chatinterface", context_window: int | None = None) -> "ResumableSessionManager":
+        """Create a SessionManager from an existing session directory.
+        
+        Args:
+            session_dir: Path to existing session directory
+            app_name: Application name for directory structure
+            context_window: Maximum context window size in tokens
+            
+        Returns:
+            ResumableSessionManager instance loaded with existing session data
+        """
+        session_path = Path(session_dir)
+        if not session_path.exists():
+            raise ValueError(f"Session directory does not exist: {session_dir}")
+        
+        metadata_file = session_path / "metadata.json"
+        history_file = session_path / "history.jsonl"
+        
+        if not metadata_file.exists() or not history_file.exists():
+            raise ValueError(f"Invalid session directory (missing metadata or history): {session_dir}")
+        
+        # Create instance using the existing session directory
+        instance = cls.__new__(cls)
+        
+        # Read context window from environment variable if not provided
+        if context_window is None:
+            context_window = int(os.getenv("CONTEXT_WINDOW", "200000"))
+        
+        # Initialize with existing session path
+        instance.app_name = app_name
+        instance.sessions_dir = session_path.parent
+        instance.session_timestamp = session_path.name
+        instance.session_dir = session_path
+        instance.metadata_file = metadata_file
+        instance.history_file = history_file
+        
+        # Load existing metadata
+        try:
+            with metadata_file.open("r", encoding="utf-8") as f:
+                metadata = json.load(f)
+                
+            instance._session_title = metadata.get("title", "Resumed Session")
+            instance._title_generated = True  # Don't regenerate title for resumed sessions
+            instance.message_count = metadata.get("message_count", 0)
+            instance.last_message_timestamp = metadata.get("last_message_timestamp")
+            
+        except (json.JSONDecodeError, OSError):
+            # Fallback values if metadata is corrupted
+            instance._session_title = "Resumed Session"
+            instance._title_generated = True
+            instance.message_count = 0
+            instance.last_message_timestamp = None
+        
+        # Initialize other required attributes
+        instance.first_user_message = None
+        instance.messages = []
+        
+        # Initialize cost tracking - load existing costs from metadata
+        from libchatinterface.costs import SessionCosts
+        instance.session_costs = SessionCosts()
+        
+        # Load existing usage data from metadata if available
+        try:
+            with metadata_file.open("r", encoding="utf-8") as f:
+                metadata = json.load(f)
+                usage_data = metadata.get("usage", {})
+                
+                # Restore previous token counts if available
+                if usage_data:
+                    from pydantic_ai.usage import RunUsage
+                    from libchatinterface.costs import add_usage_to_session, calculate_usage_cost
+                    
+                    # Handle both old format (direct keys) and new format (nested under 'total')
+                    if "total" in usage_data:
+                        # New format: usage.total.input_tokens, etc.
+                        total_data = usage_data["total"]
+                        input_tokens = total_data.get("input_tokens", 0)
+                        output_tokens = total_data.get("output_tokens", 0) 
+                        total_tokens = total_data.get("total_tokens", 0)
+                        requests = total_data.get("requests", 0)
+                        cache_read_tokens = total_data.get("cached_tokens", 0)  # Map old cached_tokens to cache_read_tokens
+                    else:
+                        # Old format: usage.total_tokens, etc.
+                        total_tokens = usage_data.get("total_tokens", 0)
+                        input_tokens = usage_data.get("input_tokens", 0)
+                        output_tokens = usage_data.get("output_tokens", 0)
+                        requests = usage_data.get("requests", 1 if total_tokens > 0 else 0)  # Estimate requests
+                        cache_read_tokens = usage_data.get("cached_tokens", 0)
+                        
+                        # If we only have total_tokens, estimate the split (rough approximation)
+                        if total_tokens > 0 and input_tokens == 0 and output_tokens == 0:
+                            # Rough estimate: 70% input, 30% output for resumed sessions
+                            input_tokens = int(total_tokens * 0.7)
+                            output_tokens = total_tokens - input_tokens
+                    
+                    if total_tokens > 0 or input_tokens > 0 or output_tokens > 0:
+                        # Create usage object to restore session costs
+                        restored_usage = RunUsage(
+                            input_tokens=input_tokens,
+                            output_tokens=output_tokens,
+                            requests=requests,
+                            cache_read_tokens=cache_read_tokens
+                        )
+                        
+                        # Calculate costs and add to session
+                        usage_costs = calculate_usage_cost(restored_usage, None)  # No model name available
+                        add_usage_to_session(instance.session_costs, usage_costs)
+                        
+        except (json.JSONDecodeError, OSError, ImportError, TypeError):
+            # If we can't load existing costs, start fresh
+            pass
+        
+        # Context compression
+        instance.context_window = context_window
+        instance.compressed_context = None
+        instance._encoding = tiktoken.encoding_for_model("gpt-4")
+        
+        # Load message history
+        instance._load_message_history()
+        
+        return instance
+    
+    def _load_message_history(self) -> None:
+        """Load message history from history.jsonl file into memory."""
+        try:
+            with self.history_file.open("r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if line:
+                        try:
+                            message_data = json.loads(line)
+                            self.messages.append(message_data)
+                            
+                            # Update message counter to match loaded history
+                            msg_index = message_data.get("message_index", 0)
+                            if msg_index >= self.message_count:
+                                self.message_count = msg_index + 1
+                                
+                        except json.JSONDecodeError:
+                            # Skip corrupted message lines
+                            continue
+                            
+        except (OSError, FileNotFoundError):
+            # If we can't load history, start fresh but keep metadata
+            pass
+    
+    def get_conversation_context(self) -> list[dict[str, Any]]:
+        """Get the full conversation context for display in resumed chat."""
+        return self.messages.copy()
+
+    def get_pydantic_message_history(self) -> list:
+        """Convert stored conversation context to Pydantic AI ModelMessage format.
+        
+        Returns:
+            List of ModelMessage objects for use with Pydantic AI agent.run()
+        """
+        try:
+            from pydantic_ai.messages import (
+                ModelMessage, ModelRequest, ModelResponse, 
+                UserPromptPart, TextPart
+            )
+        except ImportError:
+            # Fallback if pydantic_ai not available
+            return []
+        
+        pydantic_messages = []
+        
+        for message in self.messages:
+            msg_type = message.get("type", "unknown")
+            content = message.get("content", "")
+            
+            # Skip system prompts and compression events
+            if msg_type in ["system_prompt", "context_compression"]:
+                continue
+                
+            # Convert user messages to ModelRequest
+            if msg_type == "user_message":
+                request = ModelRequest(parts=[UserPromptPart(content=content)])
+                pydantic_messages.append(request)
+                
+            # Convert assistant responses to ModelResponse  
+            elif msg_type == "assistant_response":
+                response = ModelResponse(parts=[TextPart(content=content)])
+                pydantic_messages.append(response)
+        
+        return pydantic_messages

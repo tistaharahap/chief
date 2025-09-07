@@ -142,14 +142,6 @@ The project uses a factory pattern for agent creation:
 - **Available Models**: All OpenRouter-supported models (Anthropic, OpenAI, Google, etc.)
 - **Supported Providers**: Anthropic (primary), OpenAI, OpenRouter, Tavily (web search)
 
-### Known Issues
-
-**Critical Circular Import**: 
-```
-libagentic.agents → libagentic.tools.search → libagentic.agents (TavilyDeps)
-```
-This prevents the CLI applications from starting. The `TavilyDeps` class should be moved to a separate module (e.g., `libagentic.types` or `libagentic.deps`).
-
 ## Configuration Details
 
 ### Code Style (Ruff)

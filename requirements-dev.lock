@@ -362,6 +362,8 @@ urllib3==2.5.0
     # via botocore
     # via requests
     # via types-requests
+uuid7==0.1.0
+    # via chief
 uvicorn==0.35.0
     # via chief
     # via mcp

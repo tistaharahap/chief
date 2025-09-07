@@ -10,7 +10,7 @@ A sophisticated AI agent framework built with Pydantic AI, featuring two main ap
 - **Multi-Provider Support**: Anthropic, OpenAI, and OpenRouter integration
 - **Web Search Integration**: Powered by Tavily API for real-time information
 - **Smart Configuration**: Interactive onboarding with JSON-based settings management
-- **MongoDB Persistence**: Async document storage with Beanie ODM
+- **MongoDB Persistence**: ~~Async document storage with Beanie ODM~~ Not implemented yet
 - **Rich CLI Interface**: Beautiful terminal UI with Typer and Rich
 
 ## Quick Start

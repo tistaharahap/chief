@@ -25,6 +25,7 @@ fi
 if ! command -v uvx &> /dev/null; then
     echo -e "${RED}Error: uvx is not available${NC}"
     echo "Please ensure you have a recent version of uv that includes uvx"
+    echo "Install uv: https://docs.astral.sh/uv/getting-started/installation/"
     exit 1
 fi
 

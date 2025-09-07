@@ -53,7 +53,7 @@ uvx --python 3.13 --from chief-ai chen
 ```bash
 # Clone and setup
 git clone git@github.com:tistaharahap/chief-ai.git
-cd chief
+cd chief-ai
 source .venv/bin/activate
 
 # Install dependencies

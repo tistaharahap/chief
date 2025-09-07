@@ -36,13 +36,13 @@ anyio==4.10.0
 argcomplete==3.6.2
     # via pydantic-ai-slim
 asyncer==0.0.8
-    # via chief
+    # via chief-ai
 attrs==25.3.0
     # via aiohttp
     # via jsonschema
     # via referencing
 beanie==2.0.0
-    # via chief
+    # via chief-ai
 boto3==1.40.25
     # via pydantic-ai-slim
 botocore==1.40.25
@@ -65,13 +65,15 @@ cohere==5.17.0
 colorama==0.4.6
     # via griffe
 coolname==2.2.0
-    # via chief
+    # via chief-ai
 distro==1.9.0
     # via anthropic
     # via groq
     # via openai
 dnspython==2.7.0
     # via pymongo
+docutils==0.22
+    # via readme-renderer
 eval-type-backport==0.2.2
     # via mistralai
 executing==2.2.1
@@ -123,6 +125,8 @@ httpx-sse==0.4.0
 huggingface-hub==0.34.4
     # via pydantic-ai-slim
     # via tokenizers
+id==1.5.0
+    # via twine
 idna==3.10
     # via anyio
     # via httpx
@@ -134,6 +138,12 @@ iniconfig==2.1.0
     # via pytest
 invoke==2.2.0
     # via mistralai
+jaraco-classes==3.4.0
+    # via keyring
+jaraco-context==6.0.1
+    # via keyring
+jaraco-functools==4.3.0
+    # via keyring
 jiter==0.10.0
     # via anthropic
     # via openai
@@ -144,10 +154,12 @@ jsonschema==4.25.1
     # via mcp
 jsonschema-specifications==2025.4.1
     # via jsonschema
+keyring==25.6.0
+    # via twine
 lazy-model==0.3.0
     # via beanie
 logfire==4.4.0
-    # via chief
+    # via chief-ai
     # via pydantic-ai-slim
 logfire-api==4.4.0
     # via pydantic-evals
@@ -160,11 +172,16 @@ mdurl==0.1.2
     # via markdown-it-py
 mistralai==1.9.10
     # via pydantic-ai-slim
+more-itertools==10.8.0
+    # via jaraco-classes
+    # via jaraco-functools
 multidict==6.6.4
     # via aiohttp
     # via yarl
 nexus-rpc==1.1.0
     # via temporalio
+nh3==0.3.0
+    # via readme-renderer
 openai==1.106.1
     # via pydantic-ai-slim
 opentelemetry-api==1.36.0
@@ -199,6 +216,7 @@ packaging==25.0
     # via huggingface-hub
     # via opentelemetry-instrumentation
     # via pytest
+    # via twine
 pluggy==1.6.0
     # via pytest
 prompt-toolkit==3.0.52
@@ -233,7 +251,7 @@ pydantic==2.11.7
     # via pydantic-graph
     # via pydantic-settings
 pydantic-ai==1.0.1
-    # via chief
+    # via chief-ai
 pydantic-ai-slim==1.0.1
     # via pydantic-ai
     # via pydantic-evals
@@ -243,13 +261,14 @@ pydantic-core==2.33.2
 pydantic-evals==1.0.1
     # via pydantic-ai-slim
 pydantic-graph==1.0.1
-    # via chief
+    # via chief-ai
     # via pydantic-ai-slim
 pydantic-settings==2.10.1
-    # via chief
+    # via chief-ai
     # via mcp
 pygments==2.19.2
     # via pytest
+    # via readme-renderer
     # via rich
 pymongo==4.14.1
     # via beanie
@@ -264,7 +283,7 @@ python-dateutil==2.9.0.post0
     # via botocore
     # via mistralai
 python-dotenv==1.1.1
-    # via chief
+    # via chief-ai
     # via pydantic-settings
 python-multipart==0.0.20
     # via mcp
@@ -272,6 +291,8 @@ pyyaml==6.0.2
     # via huggingface-hub
     # via mistralai
     # via pydantic-evals
+readme-renderer==44.0
+    # via twine
 referencing==0.36.2
     # via jsonschema
     # via jsonschema-specifications
@@ -281,14 +302,22 @@ requests==2.32.5
     # via cohere
     # via google-genai
     # via huggingface-hub
+    # via id
     # via opentelemetry-exporter-otlp-proto-http
     # via pydantic-ai-slim
+    # via requests-toolbelt
     # via tavily-python
     # via tiktoken
+    # via twine
+requests-toolbelt==1.0.0
+    # via twine
+rfc3986==2.0.0
+    # via twine
 rich==14.1.0
     # via logfire
     # via pydantic-ai-slim
     # via pydantic-evals
+    # via twine
     # via typer
 rpds-py==0.27.1
     # via jsonschema
@@ -313,22 +342,23 @@ starlette==0.47.3
     # via mcp
     # via pydantic-ai-slim
 tavily-python==0.7.11
-    # via chief
+    # via chief-ai
 temporalio==1.17.0
     # via pydantic-ai-slim
 tenacity==9.1.2
     # via google-genai
     # via pydantic-ai-slim
 tiktoken==0.11.0
-    # via chief
+    # via chief-ai
     # via tavily-python
 tokenizers==0.22.0
     # via cohere
 tqdm==4.67.1
     # via huggingface-hub
     # via openai
+twine==6.2.0
 typer==0.17.4
-    # via chief
+    # via chief-ai
 types-protobuf==6.30.2.20250822
     # via temporalio
 types-requests==2.32.4.20250809
@@ -361,11 +391,12 @@ typing-inspection==0.4.1
 urllib3==2.5.0
     # via botocore
     # via requests
+    # via twine
     # via types-requests
 uuid7==0.1.0
-    # via chief
+    # via chief-ai
 uvicorn==0.35.0
-    # via chief
+    # via chief-ai
     # via mcp
 wcwidth==0.2.13
     # via prompt-toolkit

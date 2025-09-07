@@ -1,9 +1,27 @@
 [project]
-name = "chief"
+name = "chief-ai"
 version = "0.1.0"
-description = "Add your description here"
+description = "AI agent framework with Chief and Chen, a conversational AI psychologist with web search and multi-provider support in your terminal."
 authors = [
     { name = "Batista Harahap", email = "batista@bango29.com" }
+]
+license = {text = "MIT"}
+keywords = ["ai", "agent", "anthropic", "openai", "openrouter", "chat", "assistant", "psychologist"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Communications :: Chat",
+    "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = [
     "pydantic-ai[logfire]>=1.0.1",
@@ -23,6 +41,11 @@ dependencies = [
 readme = "README.md"
 requires-python = ">= 3.8"
 
+[project.urls]
+Homepage = "https://github.com/tistaharahap/chief-ai"
+Repository = "https://github.com/tistaharahap/chief-ai"
+Issues = "https://github.com/tistaharahap/chief-ai/issues"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
@@ -34,17 +57,14 @@ dev-dependencies = [
     "pytest>=8.4.2",
     "pytest-asyncio>=1.1.0",
     "pytest-env>=1.1.5",
+    "twine>=6.2.0",
 ]
 
 [tool.hatch.metadata]
 allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
-packages = [
-    "src/chief",
-    "src/libagentic",
-    "src/libshared",
-]
+packages = ["src/appclis", "src/libagentic", "src/libshared", "src/libchatinterface"]
 
 [project.scripts]
 chief = "appclis.chief:app"

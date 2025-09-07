@@ -36,13 +36,13 @@ anyio==4.10.0
 argcomplete==3.6.2
     # via pydantic-ai-slim
 asyncer==0.0.8
-    # via chief
+    # via chief-ai
 attrs==25.3.0
     # via aiohttp
     # via jsonschema
     # via referencing
 beanie==2.0.0
-    # via chief
+    # via chief-ai
 boto3==1.40.25
     # via pydantic-ai-slim
 botocore==1.40.25
@@ -65,7 +65,7 @@ cohere==5.17.0
 colorama==0.4.6
     # via griffe
 coolname==2.2.0
-    # via chief
+    # via chief-ai
 distro==1.9.0
     # via anthropic
     # via groq
@@ -145,7 +145,7 @@ jsonschema-specifications==2025.4.1
 lazy-model==0.3.0
     # via beanie
 logfire==4.4.0
-    # via chief
+    # via chief-ai
     # via pydantic-ai-slim
 logfire-api==4.4.0
     # via pydantic-evals
@@ -228,7 +228,7 @@ pydantic==2.11.7
     # via pydantic-graph
     # via pydantic-settings
 pydantic-ai==1.0.1
-    # via chief
+    # via chief-ai
 pydantic-ai-slim==1.0.1
     # via pydantic-ai
     # via pydantic-evals
@@ -238,10 +238,10 @@ pydantic-core==2.33.2
 pydantic-evals==1.0.1
     # via pydantic-ai-slim
 pydantic-graph==1.0.1
-    # via chief
+    # via chief-ai
     # via pydantic-ai-slim
 pydantic-settings==2.10.1
-    # via chief
+    # via chief-ai
     # via mcp
 pygments==2.19.2
     # via rich
@@ -253,7 +253,7 @@ python-dateutil==2.9.0.post0
     # via botocore
     # via mistralai
 python-dotenv==1.1.1
-    # via chief
+    # via chief-ai
     # via pydantic-settings
 python-multipart==0.0.20
     # via mcp
@@ -301,14 +301,14 @@ starlette==0.47.3
     # via mcp
     # via pydantic-ai-slim
 tavily-python==0.7.11
-    # via chief
+    # via chief-ai
 temporalio==1.17.0
     # via pydantic-ai-slim
 tenacity==9.1.2
     # via google-genai
     # via pydantic-ai-slim
 tiktoken==0.11.0
-    # via chief
+    # via chief-ai
     # via tavily-python
 tokenizers==0.22.0
     # via cohere
@@ -316,7 +316,7 @@ tqdm==4.67.1
     # via huggingface-hub
     # via openai
 typer==0.17.4
-    # via chief
+    # via chief-ai
 types-protobuf==6.30.2.20250822
     # via temporalio
 types-requests==2.32.4.20250809
@@ -351,9 +351,9 @@ urllib3==2.5.0
     # via requests
     # via types-requests
 uuid7==0.1.0
-    # via chief
+    # via chief-ai
 uvicorn==0.35.0
-    # via chief
+    # via chief-ai
     # via mcp
 wcwidth==0.2.13
     # via prompt-toolkit

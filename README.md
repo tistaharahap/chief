@@ -22,7 +22,7 @@ On the other hand, **Chief** is a barebone agent with a barebone system prompt. 
 
 ```bash
 # Clone and setup
-git clone git@github.com:tistaharahap/chief.git
+git clone git@github.com:tistaharahap/chief-ai.git
 cd chief
 source .venv/bin/activate
 

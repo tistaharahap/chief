@@ -413,64 +413,64 @@ Available commands:
         elif user_input.lower() == "/resume":
             return self._handle_resume_command()
         return True
-    
+
     def _handle_resume_command(self) -> bool:
         """Handle the /resume command to load a previous session."""
-        from libchatinterface.session import SessionLister, ResumableSessionManager
-        
+        from libchatinterface.session import ResumableSessionManager, SessionLister
+
         try:
             # Create session lister and show selection interface
             lister = SessionLister(self.app_name)
             selected_session_dir = lister.show_session_selection(self.console)
-            
+
             if selected_session_dir is None:
                 self.console.print("[yellow]Resume cancelled.[/yellow]")
                 return True
-            
+
             # Load the selected session
             resumed_manager = ResumableSessionManager.from_existing_session(
                 selected_session_dir,
                 self.app_name,
                 context_window=self.session_manager.context_window
             )
-            
+
             # Display session info
             session_info = resumed_manager.get_session_info()
             self.console.print(f"[green]✓ Resumed session: {session_info['title']}[/green]")
             self.console.print(f"[dim]Messages: {session_info['message_count']}, Last activity: {session_info['last_message_timestamp'] or 'Unknown'}[/dim]")
-            
+
             # Replace current session manager with resumed one
             self.session_manager = resumed_manager
-            
+
             # Display conversation history
             self._display_conversation_history()
-            
+
             return True
-            
+
         except Exception as e:
             self.console.print(f"[red]Error resuming session: {str(e)}[/red]")
             return True
-    
+
     def _display_conversation_history(self) -> None:
         """Display the conversation history from the resumed session."""
         messages = self.session_manager.get_conversation_context()
-        
+
         if not messages:
             self.console.print("[dim]No previous messages to display.[/dim]")
             return
-        
+
         self.console.print()
         self.console.print("[bold blue]Conversation History:[/bold blue]")
         self.console.print()
-        
+
         for message in messages:
             msg_type = message.get("type", "unknown")
             content = message.get("content", "")
-            
+
             # Skip system prompts as requested
             if msg_type == "system_prompt":
                 continue
-                
+
             if msg_type == "user_message":
                 self.console.print(f"[bold green]You:[/bold green] {content}")
                 self.console.print()  # Add line break after each message
@@ -480,7 +480,7 @@ Available commands:
             elif msg_type == "context_compression":
                 self.console.print(f"[yellow]ℹ {content}[/yellow]")
                 self.console.print()  # Add line break after each message
-        
+
         self.console.print("[dim]--- End of history ---[/dim]")
         self.console.print()
 
@@ -512,18 +512,18 @@ Available commands:
 
                 # Start the streaming context but don't stream yet
                 status.update("[bold blue]Awaiting response...")
-                
+
                 # Check if this is a resumed session and get message history
                 message_history = None
-                if hasattr(self.session_manager, 'get_pydantic_message_history'):
+                if hasattr(self.session_manager, "get_pydantic_message_history"):
                     message_history = self.session_manager.get_pydantic_message_history()
-                
+
                 # Use message history for resumed sessions
                 if message_history:
                     stream_context = current_agent.run_stream(message, deps=self.deps, message_history=message_history)
                 else:
                     stream_context = current_agent.run_stream(message, deps=self.deps)
-                    
+
                 result = await stream_context.__aenter__()
 
             # Status is automatically cleared when exiting the status context
@@ -538,7 +538,7 @@ Available commands:
                 try:
                     async for text_delta in result.stream_text(delta=True, debounce_by=0.01):
                         # Print each character as it arrives - Rich Console doesn't need flush
-                        self.console.print(text_delta, end="")
+                        self.console.print(text_delta, end="", markup=True, highlight=False)
                         full_response += text_delta
                 except GeneratorExit:
                     # Handle clean generator exit on Ctrl+C
@@ -568,8 +568,8 @@ Available commands:
                         if not hasattr(self, "_last_message_count")
                         or len(all_messages) > getattr(self, "_last_message_count", 0)
                     ]
-                    
-                    
+
+
                     # Log new messages if we have them
                     if new_messages:
                         self.session_manager.log_pydantic_messages(new_messages)
@@ -581,12 +581,12 @@ Available commands:
                         if assistant_responses:
                             latest_response = assistant_responses[-1]
                             self.session_manager.log_pydantic_messages([latest_response])
-                    
+
                     # ALWAYS check compression after assistant responses
                     await self.session_manager.compress_context_if_needed()
-                    
+
                     self._last_message_count = len(all_messages)
-                except Exception as e:
+                except Exception:
                     # If we can't get Pydantic messages, continue with basic logging
                     # Fallback to basic logging if Pydantic message logging fails
                     if full_response:
@@ -598,7 +598,7 @@ Available commands:
             finally:
                 # Properly close the stream context
                 await stream_context.__aexit__(None, None, None)
-                
+
                 # Safety net: Always check compression after any response processing
                 await self.session_manager.compress_context_if_needed()
 

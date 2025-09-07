@@ -88,7 +88,73 @@ If the `anthropic_api_key` in `~/.chen/settings.json` is set, Claude 4 Sonnet wi
 
 To use free models, simply set the OpenRouter API key and leave the others unset.
 
-## Configuration
+### Chen
+
+Chen has its settings defined in `~/.chen/settings.json` that looks like this:
+
+```json
+{
+  "anthropic_api_key": "sk-ant-...",
+  "openai_api_key": "sk-...",
+  "openrouter_api_key": "sk-or-...",
+  "tavily_api_key": "tvly_...",
+  "context_window": 200000
+}
+```
+
+#### Settings Explained
+
+Each of these settings items are going to be prompted during onboarding if not set. Here are some commands with regards to settings:
+
+```bash
+chen config                             # View all settings
+chen config get anthropic_api_key       # Get specific setting, follows the JSON keys
+chen config set context_window 150000   # Set specific setting
+```
+
+#### Sessions
+
+You can also find your chat history in `~/.chen/sessions/` with each session as a subdirectory there. A typical session directory might look like this:
+
+```bash
+ls -la ~/.chen/sessions/
+total 0
+drwxr-xr-x@ 14 tista  staff  448 Sep  7 23:07 .
+drwxr-xr-x@  5 tista  staff  160 Sep  7 22:05 ..
+drwxr-xr-x@  4 tista  staff  128 Sep  7 21:01 068bdba6-1b51-7fd5-8000-b37d1f0832ea
+drwxr-xr-x@  4 tista  staff  128 Sep  7 21:02 068bdbab-2071-7c75-8000-2cb9c8158015
+drwxr-xr-x@  4 tista  staff  128 Sep  7 21:04 068bdbb2-163e-7553-8000-e3ce5a060b30
+drwxr-xr-x@  4 tista  staff  128 Sep  7 21:04 068bdbb3-bbca-76b9-8000-498755d91316
+drwxr-xr-x@  4 tista  staff  128 Sep  7 21:05 068bdbb5-702c-7e57-8000-317c40048963
+drwxr-xr-x@  4 tista  staff  128 Sep  7 21:09 068bdbc3-cff6-7ea4-8000-62576dfa2d1f
+```
+
+Session subdirectories are named with UUID v7 which are chronologically sorted. Within each session, you will find these files:
+
+```bash
+ls -la ~/.chen/sessions/068bdba6-1b51-7fd5-8000-b37d1f0832ea 
+total 160
+drwxr-xr-x@  4 tista  staff    128 Sep  7 21:01 .
+drwxr-xr-x@ 14 tista  staff    448 Sep  7 23:07 ..
+-rw-r--r--@  1 tista  staff  74545 Sep  7 21:01 history.jsonl
+-rw-r--r--@  1 tista  staff    327 Sep  7 21:01 metadata.json
+```
+
+The `history.jsonl` file contains the full conversation history in JSON Lines format, while `metadata.json` holds session metadata.
+
+#### In-chat Commands
+
+While in a chat session with Chen, you can use the following commands:
+
+```
+/quit       # Exit the chat session
+/exit       # Exit the chat session
+Ctrl+D      # Exit the chat session
+Ctrl+C      # Exit the chat session supposedly but you have to press it twice, got some exception bubbling not right yet
+/resume     # Resume a previous session, you will be shown a list of sessions to choose from
+```
+
+## Development
 
 ### Chen Configuration System
 

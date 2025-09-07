@@ -9,19 +9,64 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 source .venv/bin/activate
 ```
 
-### Required Environment Variables
-```bash
-# OpenRouter API key (required) - Get from https://openrouter.ai/keys
-export OPENROUTER_API_KEY="your-openrouter-api-key-here"
+### Chen Configuration
 
-# Tavily API key (required for web search) - Get from https://tavily.com
-export TAVILY_API_KEY="your-tavily-api-key-here"
+Chen uses JSON-based configuration stored in `~/.chen/settings.json`. On first run, Chen will automatically launch an interactive onboarding process to collect your API keys and preferences.
+
+#### Interactive Setup (Recommended)
+```bash
+# First time running Chen triggers automatic onboarding
+rye run chen
+# OR manually trigger onboarding
+rye run chen onboard
+```
+
+#### Manual Configuration
+```bash
+# Set individual configuration values
+rye run chen config set anthropic_api_key "sk-ant-..."
+rye run chen config set openai_api_key "sk-..."
+rye run chen config set openrouter_api_key "sk-or-..."
+rye run chen config set tavily_api_key "tvly-..."
+rye run chen config set context_window 150000
+
+# View all settings
+rye run chen config
+
+# Get specific setting
+rye run chen config get anthropic_api_key
+
+# Reset all settings (triggers onboarding on next run)
+rye run chen reset
+```
+
+#### Configuration File Structure
+Settings are stored in `~/.chen/settings.json`:
+```json
+{
+  "anthropic_api_key": "sk-ant-...",
+  "openai_api_key": "sk-...",
+  "openrouter_api_key": "sk-or-...",
+  "tavily_api_key": "tvly-...",
+  "context_window": 200000
+}
+```
+
+#### Environment Variables (Optional)
+Environment variables can be used as defaults during onboarding:
+```bash
+export ANTHROPIC_API_KEY="your-anthropic-api-key"
+export OPENAI_API_KEY="your-openai-api-key" 
+export OPENROUTER_API_KEY="your-openrouter-api-key"
+export TAVILY_API_KEY="your-tavily-api-key"
 ```
 
 Or set them in the `.env` file:
 ```env
-OPENROUTER_API_KEY=your-openrouter-api-key-here
-TAVILY_API_KEY=your-tavily-api-key-here
+ANTHROPIC_API_KEY=your-anthropic-api-key
+OPENAI_API_KEY=your-openai-api-key
+OPENROUTER_API_KEY=your-openrouter-api-key
+TAVILY_API_KEY=your-tavily-api-key
 ```
 
 ### Code Quality
@@ -47,8 +92,24 @@ pytest --cov=src
 
 ### Running Applications
 ```bash
-python src/appclis/chief.py --help
-python src/appclis/chen.py --help
+rye run chief --help
+rye run chen --help
+```
+
+#### Chen CLI Commands
+```bash
+# Start Chen chat interface
+rye run chen
+
+# Configuration management
+rye run chen config              # Show all settings
+rye run chen config list         # Same as above
+rye run chen config get <key>    # Get specific setting
+rye run chen config set <key> <value>  # Set specific setting
+
+# Setup and maintenance
+rye run chen onboard            # Run interactive setup
+rye run chen reset              # Reset all settings
 ```
 
 ### Running Commands
@@ -61,6 +122,7 @@ This project implements AI agents using the Pydantic AI framework with two main 
 
 ### Core Structure
 - **src/appclis/**: CLI entry points using Typer framework
+  - **settings/**: Chen configuration management system with Pydantic models
 - **src/libagentic/**: Core agent library with tools, providers, and MongoDB integration
 - **src/libshared/**: Shared utilities, particularly MongoDB base classes
 
@@ -76,8 +138,9 @@ The project uses a factory pattern for agent creation:
 ### Model Configuration
 - **Default Model**: `anthropic/claude-3.5-sonnet` via OpenRouter
 - **Provider**: OpenRouter (https://openrouter.ai) for multi-provider access
-- **API Key**: Set `OPENROUTER_API_KEY` in `.env` file
+- **API Key Configuration**: Interactive onboarding or `chen config set` commands
 - **Available Models**: All OpenRouter-supported models (Anthropic, OpenAI, Google, etc.)
+- **Supported Providers**: Anthropic (primary), OpenAI, OpenRouter, Tavily (web search)
 
 ### Known Issues
 
@@ -97,7 +160,9 @@ This prevents the CLI applications from starting. The `TavilyDeps` class should 
 
 ### Dependencies
 - **Pydantic AI**: Core agent framework with Logfire integration
-- **Typer**: CLI framework
+- **Pydantic Settings**: Configuration management with validation
+- **Typer**: CLI framework with command groups
+- **Rich**: Terminal formatting and interactive prompts
 - **Beanie**: Async MongoDB ODM  
 - **Tavily**: Web search API client
 - **Asyncer**: Async utilities
@@ -117,3 +182,25 @@ First-party packages are: `["apppublicapi", "libagentic", "libshared"]`
 
 ### MongoDB Integration
 Uses Beanie ODM with base classes in `libshared/mongo.py` providing common document patterns and slug mixins.
+
+### Chen Settings Architecture
+Chen implements a sophisticated configuration system:
+
+#### Settings Module (`src/appclis/settings/`)
+- **`chen_settings.py`**: Pydantic BaseSettings model with validation
+  - Supports 4 API providers with field validation
+  - Configurable context window (default: 200,000 tokens)
+  - Requires at least one API key for operation
+- **`settings_manager.py`**: Core settings management class
+  - JSON file operations with `~/.chen/settings.json`
+  - Interactive onboarding with environment variable defaults
+  - Individual setting get/set operations with type conversion
+  - API key masking for security
+- **`__init__.py`**: Module exports for clean imports
+
+#### Key Features
+- **Automatic Onboarding**: Triggered on first run or when settings are missing
+- **Environment Variable Integration**: Uses existing env vars as onboarding defaults
+- **Type Safety**: Pydantic validation with proper error handling
+- **Security**: API key masking in CLI display and error messages
+- **Backwards Compatibility**: Still loads `.env` files as fallback defaults

@@ -429,15 +429,15 @@ Available commands:
 
             # Load the selected session
             resumed_manager = ResumableSessionManager.from_existing_session(
-                selected_session_dir,
-                self.app_name,
-                context_window=self.session_manager.context_window
+                selected_session_dir, self.app_name, context_window=self.session_manager.context_window
             )
 
             # Display session info
             session_info = resumed_manager.get_session_info()
             self.console.print(f"[green]✓ Resumed session: {session_info['title']}[/green]")
-            self.console.print(f"[dim]Messages: {session_info['message_count']}, Last activity: {session_info['last_message_timestamp'] or 'Unknown'}[/dim]")
+            self.console.print(
+                f"[dim]Messages: {session_info['message_count']}, Last activity: {session_info['last_message_timestamp'] or 'Unknown'}[/dim]"
+            )
 
             # Replace current session manager with resumed one
             self.session_manager = resumed_manager
@@ -569,7 +569,6 @@ Available commands:
                         or len(all_messages) > getattr(self, "_last_message_count", 0)
                     ]
 
-
                     # Log new messages if we have them
                     if new_messages:
                         self.session_manager.log_pydantic_messages(new_messages)
@@ -577,6 +576,7 @@ Available commands:
                         # Even if no "new" messages, we need to ensure current assistant response tokens are counted
                         # Find the latest assistant response and log it for token counting
                         from pydantic_ai.messages import ModelResponse
+
                         assistant_responses = [msg for msg in all_messages if isinstance(msg, ModelResponse)]
                         if assistant_responses:
                             latest_response = assistant_responses[-1]

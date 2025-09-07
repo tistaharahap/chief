@@ -538,10 +538,7 @@ class SessionLister:
             time_diff = now - created_dt
 
             if time_diff.days > 0:
-                if time_diff.days == 1:
-                    time_str = "1 day ago"
-                else:
-                    time_str = f"{time_diff.days} days ago"
+                time_str = "1 day ago" if time_diff.days == 1 else f"{time_diff.days} days ago"
             elif time_diff.seconds > 3600:
                 hours = time_diff.seconds // 3600
                 time_str = f"{hours} hour{'s' if hours != 1 else ''} ago"

@@ -384,10 +384,7 @@ class ChatInterface:
 
         # Cost
         if total.cost_usd is not None and total.cost_usd > 0:
-            if total.cost_usd < 0.01:
-                cost_text = "Cost: <$0.01"
-            else:
-                cost_text = f"Cost: ${total.cost_usd:.4f}"
+            cost_text = "Cost: <$0.01" if total.cost_usd < 0.01 else f"Cost: ${total.cost_usd:.4f}"
             usage_parts.append(cost_text)
 
         # Display usage info

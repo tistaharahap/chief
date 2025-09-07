@@ -120,7 +120,7 @@ def get_compression_agent() -> Agent:
     compression_prompt = """You are a context compression specialist. Your task is to compress conversation history while:
 
 PRIORITY 1: Preserve meaning over token reduction - never sacrifice understanding for brevity
-PRIORITY 2: Capture nuances and subtleties - small details often matter most for continuity  
+PRIORITY 2: Capture nuances and subtleties - small details often matter most for continuity
 PRIORITY 3: Maintain key points and decisions - but subordinate to priorities 1 & 2
 
 Compress the following conversation history into a coherent summary that preserves:

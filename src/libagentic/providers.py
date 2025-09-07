@@ -81,7 +81,9 @@ def get_default_model(
 
     match [anthropic_api_key is not None, openai_api_key is not None, openrouter_api_key is not None]:
         case [False, False, False]:
-            raise ValueError("No API keys found. Please set at least one of ANTHROPIC_API_KEY, OPENAI_API_KEY, or OPENROUTER_API_KEY environment variables.")
+            raise ValueError(
+                "No API keys found. Please set at least one of ANTHROPIC_API_KEY, OPENAI_API_KEY, or OPENROUTER_API_KEY environment variables."
+            )
         case [True, True, True]:
             return FallbackModel(
                 get_anthropic_model(anthropic_model_name),

@@ -270,13 +270,13 @@ class SettingsManager:
 
     def get_setting(self, key: str) -> Any:
         """Get a single setting value.
-        
+
         Args:
             key: The setting key to retrieve
-            
+
         Returns:
             The setting value
-            
+
         Raises:
             ValueError: If key doesn't exist
         """
@@ -295,11 +295,11 @@ class SettingsManager:
 
     def set_setting(self, key: str, value: str) -> None:
         """Set a single setting value.
-        
+
         Args:
             key: The setting key to set
             value: The string value to set (will be converted to correct type)
-            
+
         Raises:
             ValueError: If key doesn't exist or value is invalid
         """
@@ -327,7 +327,7 @@ class SettingsManager:
             self.save_settings(updated_settings)
             console.print(f"[green]✅ Setting '{key}' updated successfully[/green]")
         except Exception as e:
-            raise ValueError(f"Failed to update setting: {e}")
+            raise ValueError(f"Failed to update setting: {e}") from e
 
     def _get_valid_keys(self) -> list[str]:
         """Get list of valid setting keys from the model."""
@@ -335,14 +335,14 @@ class SettingsManager:
 
     def _convert_setting_value(self, key: str, value: str) -> Any:
         """Convert string value to the correct type for the given setting key.
-        
+
         Args:
             key: The setting key
             value: The string value to convert
-            
+
         Returns:
             The converted value
-            
+
         Raises:
             ValueError: If conversion fails
         """
@@ -365,12 +365,11 @@ class SettingsManager:
             try:
                 converted = int(value)
                 # Apply field constraints (like gt=1 for context_window)
-                if hasattr(field_info, "gt") and field_info.gt is not None:
-                    if converted <= field_info.gt:
-                        raise ValueError(f"Value must be greater than {field_info.gt}")
+                if hasattr(field_info, "gt") and field_info.gt is not None and converted <= field_info.gt:
+                    raise ValueError(f"Value must be greater than {field_info.gt}")
                 return converted
             except ValueError as e:
-                raise ValueError(f"Invalid integer value '{value}' for {key}: {e}")
+                raise ValueError(f"Invalid integer value '{value}' for {key}: {e}") from e
         elif field_type is str:
             return value
         else:

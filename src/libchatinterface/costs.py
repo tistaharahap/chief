@@ -1,8 +1,8 @@
 """Cost tracking and calculation utilities for chat sessions."""
 
 import re
-from typing import Dict, Optional, Tuple
 from dataclasses import dataclass
+
 from pydantic_ai.usage import RunUsage
 
 
@@ -12,12 +12,12 @@ class ModelCosts:
 
     input_cost_per_1k: float  # USD per 1K input tokens
     output_cost_per_1k: float  # USD per 1K output tokens
-    cached_cost_per_1k: Optional[float] = None  # USD per 1K cached tokens (if supported)
+    cached_cost_per_1k: float | None = None  # USD per 1K cached tokens (if supported)
 
 
 # Model pricing configuration (as of January 2025)
 # Prices are per 1K tokens in USD
-MODEL_PRICING: Dict[str, ModelCosts] = {
+MODEL_PRICING: dict[str, ModelCosts] = {
     # Anthropic models (direct API pricing)
     "claude-3-5-sonnet-20241022": ModelCosts(3.00, 15.00),
     "claude-3-5-sonnet-latest": ModelCosts(3.00, 15.00),
@@ -50,8 +50,8 @@ class UsageCosts:
     cached_tokens: int = 0
     total_tokens: int = 0
     requests: int = 0
-    cost_usd: Optional[float] = None
-    model_name: Optional[str] = None
+    cost_usd: float | None = None
+    model_name: str | None = None
 
 
 @dataclass
@@ -59,7 +59,7 @@ class SessionCosts:
     """Aggregated costs for an entire session."""
 
     total_usage: UsageCosts
-    model_breakdown: Dict[str, UsageCosts]
+    model_breakdown: dict[str, UsageCosts]
 
     def __init__(self):
         self.total_usage = UsageCosts()
@@ -83,7 +83,7 @@ def normalize_model_name(model_name: str) -> str:
     return model_name.lower()
 
 
-def calculate_usage_cost(usage: RunUsage, model_name: Optional[str] = None) -> UsageCosts:
+def calculate_usage_cost(usage: RunUsage, model_name: str | None = None) -> UsageCosts:
     """Calculate costs for a RunUsage object.
 
     Args:
@@ -188,7 +188,7 @@ def format_token_count(count: int) -> str:
         return f"{count / 1000000:.1f}M"
 
 
-def format_session_costs_for_metadata(session_costs: SessionCosts) -> Dict:
+def format_session_costs_for_metadata(session_costs: SessionCosts) -> dict:
     """Format SessionCosts for inclusion in metadata.json.
 
     Args:
@@ -198,7 +198,7 @@ def format_session_costs_for_metadata(session_costs: SessionCosts) -> Dict:
         Dictionary suitable for JSON serialization
     """
 
-    def format_usage_costs(costs: UsageCosts) -> Dict:
+    def format_usage_costs(costs: UsageCosts) -> dict:
         result = {
             "input_tokens": costs.input_tokens,
             "output_tokens": costs.output_tokens,

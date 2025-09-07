@@ -75,8 +75,45 @@ def get_default_model(
     # Ensure environment variables are loaded
     load_dotenv()
 
-    return FallbackModel(
-        get_anthropic_model(anthropic_model_name),
-        get_openai_model(openai_model_name),
-        get_openrouter_model(openrouter_model_name),
-    )
+    anthropic_api_key = environ.get("ANTHROPIC_API_KEY")
+    openai_api_key = environ.get("OPENAI_API_KEY")
+    openrouter_api_key = environ.get("OPENROUTER_API_KEY")
+
+    match [anthropic_api_key is not None, openai_api_key is not None, openrouter_api_key is not None]:
+        case [False, False, False]:
+            raise ValueError("No API keys found. Please set at least one of ANTHROPIC_API_KEY, OPENAI_API_KEY, or OPENROUTER_API_KEY environment variables.")
+        case [True, True, True]:
+            return FallbackModel(
+                get_anthropic_model(anthropic_model_name),
+                get_openai_model(openai_model_name),
+                get_openrouter_model(openrouter_model_name),
+            )
+        case [True, True, False]:
+            return FallbackModel(
+                get_anthropic_model(anthropic_model_name),
+                get_openai_model(openai_model_name),
+            )
+        case [True, False, True]:
+            return FallbackModel(
+                get_anthropic_model(anthropic_model_name),
+                get_openrouter_model(openrouter_model_name),
+            )
+        case [False, True, True]:
+            return FallbackModel(
+                get_openai_model(openai_model_name),
+                get_openrouter_model(openrouter_model_name),
+            )
+        case [True, False, False]:
+            return FallbackModel(
+                get_anthropic_model(anthropic_model_name),
+            )
+        case [False, True, False]:
+            return FallbackModel(
+                get_openai_model(openai_model_name),
+            )
+        case [False, False, True]:
+            return FallbackModel(
+                get_openrouter_model(openrouter_model_name),
+            )
+        case _:
+            raise ValueError("Unexpected error in API key configuration.")

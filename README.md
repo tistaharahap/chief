@@ -41,6 +41,18 @@ Chen will guide you through interactive setup to configure your API keys and pre
 rye run chief
 ```
 
+## LLM Providers & Models Priority
+
+In [src/libagentic/providers.py](src/libagentic/providers.py), it is clear that the first choice is Anthropic's Claude 4 Sonnet.
+
+If the `anthropic_api_key` in `~/.chen/settings.json` is set, Claude 4 Sonnet will be the first choice. When all providers are set, the fallback becomes:
+
+1. `claude-sonnet-4-20250514` via Anthropic
+2. `gpt-5` via OpenAI
+3. `deepseek/deepseek-chat-v3.1:free` via OpenRouter
+
+To use free models, simply set the OpenRouter API key and leave the others unset.
+
 ## Configuration
 
 ### Chen Configuration System

@@ -4,6 +4,8 @@ A sophisticated AI agent framework built with Pydantic AI, featuring two main ap
 
 **Chen** has been written as an AI psychologist with an extensive software engineering background. You can think of her like [Wendy Rhoades](https://www.charactour.com/hub/characters/view/Wendy-Rhoades.Billions) that is always on your side.
 
+On the other hand, **Chief** is a barebone agent with a barebone system prompt. Chief provides an entry point if you want to write your own agents using the same patterns that Chen uses.
+
 ## Features
 
 - **Dual Agent System**: Chief and Chen applications with distinct personalities and capabilities
@@ -12,6 +14,7 @@ A sophisticated AI agent framework built with Pydantic AI, featuring two main ap
 - **Smart Configuration**: Interactive onboarding with JSON-based settings management
 - **MongoDB Persistence**: ~~Async document storage with Beanie ODM~~ Not implemented yet
 - **Rich CLI Interface**: Beautiful terminal UI with Typer and Rich
+- **MCP Support**: Coming soon
 
 ## Quick Start
 

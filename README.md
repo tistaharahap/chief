@@ -138,7 +138,7 @@ pytest --cov=src
 
 ## License
 
-[Add your license here]
+[MIT License](LICENSE)
 
 ## Contributing
 

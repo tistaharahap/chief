@@ -123,6 +123,17 @@ class SettingsManager:
         if openrouter_key:
             settings_data["openrouter_api_key"] = openrouter_key
 
+        # Tavily API Key
+        tavily_key = self._prompt_for_setting(
+            "tavily_api_key",
+            "Tavily API key (for web search)",
+            "https://app.tavily.com/home",
+            env_defaults.get("tavily_api_key"),
+            mask_input=True,
+        )
+        if tavily_key:
+            settings_data["tavily_api_key"] = tavily_key
+
         # Context Window
         context_window = self._prompt_for_setting(
             "context_window",
@@ -158,6 +169,7 @@ class SettingsManager:
             "anthropic_api_key": os.environ.get("ANTHROPIC_API_KEY"),
             "openai_api_key": os.environ.get("OPENAI_API_KEY"),
             "openrouter_api_key": os.environ.get("OPENROUTER_API_KEY"),
+            "tavily_api_key": os.environ.get("TAVILY_API_KEY"),
             "context_window": os.environ.get("CONTEXT_WINDOW", 200000),
         }
 

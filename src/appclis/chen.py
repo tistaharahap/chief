@@ -1,4 +1,5 @@
 import asyncio
+import os
 from os import environ
 
 import typer
@@ -19,13 +20,28 @@ console = Console()
 settings_manager = SettingsManager()
 
 
+def _set_env_from_settings(settings):
+    """Set environment variables from settings for model providers."""
+    if settings.anthropic_api_key:
+        os.environ["ANTHROPIC_API_KEY"] = settings.anthropic_api_key
+    if settings.openai_api_key:
+        os.environ["OPENAI_API_KEY"] = settings.openai_api_key
+    if settings.openrouter_api_key:
+        os.environ["OPENROUTER_API_KEY"] = settings.openrouter_api_key
+    if settings.tavily_api_key:
+        os.environ["TAVILY_API_KEY"] = settings.tavily_api_key
+
+
 async def run():
     """Initialize and run the Chen chat interface."""
     try:
         # Load settings (triggers onboarding if needed)
         settings = settings_manager.load_settings()
 
-        # Get Tavily API key from environment as fallback
+        # Set environment variables from settings for model providers
+        _set_env_from_settings(settings)
+
+        # Get Tavily API key from environment (now set from settings)
         tavily_api_key = environ.get("TAVILY_API_KEY")
         if not tavily_api_key:
             console.print("[yellow]Warning: TAVILY_API_KEY not found in environment variables.[/yellow]")

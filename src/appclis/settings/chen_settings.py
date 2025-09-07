@@ -10,6 +10,7 @@ class ChenSettings(BaseSettings):
     )
     openai_api_key: str | None = Field(None, description="OpenAI API key, https://platform.openai.com/api-keys")
     openrouter_api_key: str | None = Field(None, description="OpenRouter API key, https://openrouter.ai/settings/keys")
+    tavily_api_key: str | None = Field(None, description="Tavily API key, https://app.tavily.com/home")
     context_window: int | None = Field(200_000, gt=1, description="Context window size to trigger compression")
 
     model_config = SettingsConfigDict(case_sensitive=False)

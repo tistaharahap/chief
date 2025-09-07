@@ -2,6 +2,8 @@
 
 A sophisticated AI agent framework built with Pydantic AI, featuring two main applications: **Chief** and **Chen**. Both agents provide conversational AI interfaces with web search capabilities and configurable model providers.
 
+**Chen** has been written as an AI psychologist with an extensive software engineering background. You can think of her like [Wendy Rhoades](https://www.charactour.com/hub/characters/view/Wendy-Rhoades.Billions) that is always on your side.
+
 ## Features
 
 - **Dual Agent System**: Chief and Chen applications with distinct personalities and capabilities

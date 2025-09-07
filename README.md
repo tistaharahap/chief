@@ -131,7 +131,7 @@ pytest --cov=src
 
 ## Model Providers
 
-- **Default**: `anthropic/claude-3.5-sonnet` via OpenRouter
+- **Default**: `deepseek/deepseek-chat-v3.1:free` via OpenRouter, `gpt-5` via OpenAI and `claude-sonnet-4-20250514` via Anthropic
 - **Supported**: All Anthropic, OpenAI, and OpenRouter models
 - **Configuration**: Interactive setup or individual config commands
 - **Fallbacks**: Automatic provider selection based on availability
@@ -142,4 +142,4 @@ pytest --cov=src
 
 ## Contributing
 
-[Add contribution guidelines here]
+Contributions are welcome! Please open issues or pull requests for enhancements and bug fixes.

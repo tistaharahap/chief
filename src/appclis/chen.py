@@ -78,9 +78,58 @@ def main(ctx: typer.Context):
             console.print("\n\n[yellow]Goodbye! 👋[/yellow]")
 
 
-@app.command()
-def config():
+# Create config command group
+config_app = typer.Typer()
+app.add_typer(config_app, name="config")
+
+
+@config_app.callback(invoke_without_command=True)
+def config(ctx: typer.Context):
     """Show current configuration settings."""
+    if ctx.invoked_subcommand is None:
+        settings_manager.show_current_settings()
+
+
+@config_app.command()
+def get(key: str):
+    """Get a specific configuration setting value.
+
+    Args:
+        key: The setting key to retrieve (e.g., 'anthropic_api_key')
+    """
+    try:
+        value = settings_manager.get_setting(key)
+        if value is None:
+            console.print(f"[dim]{key}: Not set[/dim]")
+        else:
+            # Mask API keys for display
+            display_value = f"{str(value)[:8]}..." if key.endswith("_api_key") and len(str(value)) > 8 else str(value)
+            console.print(f"[cyan]{key}[/cyan]: [green]{display_value}[/green]")
+    except ValueError as e:
+        console.print(f"[red]Error: {e}[/red]")
+    except Exception as e:
+        console.print(f"[red]Error getting setting: {e}[/red]")
+
+
+@config_app.command()
+def set(key: str, value: str):
+    """Set a specific configuration setting value.
+
+    Args:
+        key: The setting key to set (e.g., 'anthropic_api_key')
+        value: The value to set
+    """
+    try:
+        settings_manager.set_setting(key, value)
+    except ValueError as e:
+        console.print(f"[red]Error: {e}[/red]")
+    except Exception as e:
+        console.print(f"[red]Error setting value: {e}[/red]")
+
+
+@config_app.command()
+def list():
+    """List all configuration settings (alias for 'chen config')."""
     settings_manager.show_current_settings()
 
 

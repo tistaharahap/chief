@@ -268,6 +268,115 @@ class SettingsManager:
         except Exception as e:
             console.print(f"[red]Error reading settings: {e}[/red]")
 
+    def get_setting(self, key: str) -> Any:
+        """Get a single setting value.
+        
+        Args:
+            key: The setting key to retrieve
+            
+        Returns:
+            The setting value
+            
+        Raises:
+            ValueError: If key doesn't exist
+        """
+        if not self.settings_exist():
+            console.print("[yellow]No settings file found. Run chen to trigger onboarding.[/yellow]")
+            return None
+
+        # Validate key exists in model
+        valid_keys = self._get_valid_keys()
+        if key not in valid_keys:
+            valid_keys_str = ", ".join(valid_keys)
+            raise ValueError(f"Invalid setting key '{key}'. Valid keys: {valid_keys_str}")
+
+        settings = self.load_settings()
+        return getattr(settings, key)
+
+    def set_setting(self, key: str, value: str) -> None:
+        """Set a single setting value.
+        
+        Args:
+            key: The setting key to set
+            value: The string value to set (will be converted to correct type)
+            
+        Raises:
+            ValueError: If key doesn't exist or value is invalid
+        """
+        if not self.settings_exist():
+            console.print("[yellow]No settings file found. Run onboarding first.[/yellow]")
+            return
+
+        # Validate key exists in model
+        valid_keys = self._get_valid_keys()
+        if key not in valid_keys:
+            valid_keys_str = ", ".join(valid_keys)
+            raise ValueError(f"Invalid setting key '{key}'. Valid keys: {valid_keys_str}")
+
+        # Load current settings
+        settings = self.load_settings()
+        settings_dict = settings.model_dump()
+
+        # Convert value to correct type based on field type
+        converted_value = self._convert_setting_value(key, value)
+        settings_dict[key] = converted_value
+
+        try:
+            # Validate the entire model
+            updated_settings = ChenSettings.model_validate(settings_dict)
+            self.save_settings(updated_settings)
+            console.print(f"[green]✅ Setting '{key}' updated successfully[/green]")
+        except Exception as e:
+            raise ValueError(f"Failed to update setting: {e}")
+
+    def _get_valid_keys(self) -> list[str]:
+        """Get list of valid setting keys from the model."""
+        return list(ChenSettings.model_fields.keys())
+
+    def _convert_setting_value(self, key: str, value: str) -> Any:
+        """Convert string value to the correct type for the given setting key.
+        
+        Args:
+            key: The setting key
+            value: The string value to convert
+            
+        Returns:
+            The converted value
+            
+        Raises:
+            ValueError: If conversion fails
+        """
+        field_info = ChenSettings.model_fields[key]
+
+        # Handle None/empty values
+        if not value or value.lower() in ("none", "null", ""):
+            return None
+
+        # Get the field type (handle Union types like str | None)
+        field_type = field_info.annotation
+
+        # Handle Union types (like str | None)
+        if hasattr(field_type, "__args__"):
+            # Extract the non-None type from the Union
+            args = field_type.__args__
+            field_type = next((arg for arg in args if arg is not type(None)), str)
+
+        if field_type is int:
+            try:
+                converted = int(value)
+                # Apply field constraints (like gt=1 for context_window)
+                if hasattr(field_info, "gt") and field_info.gt is not None:
+                    if converted <= field_info.gt:
+                        raise ValueError(f"Value must be greater than {field_info.gt}")
+                return converted
+            except ValueError as e:
+                raise ValueError(f"Invalid integer value '{value}' for {key}: {e}")
+        elif field_type is str:
+            return value
+        else:
+            # Default to string for unknown types
+            return value
+
     def reset_settings(self) -> bool:
         """Reset settings by deleting the settings file.
 

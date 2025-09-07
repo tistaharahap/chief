@@ -17,7 +17,7 @@ A sophisticated AI agent framework built with Pydantic AI, featuring two main ap
 
 ```bash
 # Clone and setup
-git clone <repository-url>
+git clone git@github.com:tistaharahap/chief.git
 cd chief
 source .venv/bin/activate
 

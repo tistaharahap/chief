@@ -127,8 +127,8 @@ def set(key: str, value: str):
         console.print(f"[red]Error setting value: {e}[/red]")
 
 
-@config_app.command()
-def list():
+@config_app.command("list")
+def list_settings():
     """List all configuration settings (alias for 'chen config')."""
     settings_manager.show_current_settings()
 

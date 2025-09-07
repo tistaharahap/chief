@@ -134,6 +134,16 @@ class SettingsManager:
         if tavily_key:
             settings_data["tavily_api_key"] = tavily_key
 
+        # Language
+        language = self._prompt_for_setting(
+            "language",
+            "Language for the AI to use",
+            None,
+            env_defaults.get("language", "English"),
+        )
+        if language:
+            settings_data["language"] = language
+
         # Context Window
         context_window = self._prompt_for_setting(
             "context_window",
@@ -170,6 +180,7 @@ class SettingsManager:
             "openai_api_key": os.environ.get("OPENAI_API_KEY"),
             "openrouter_api_key": os.environ.get("OPENROUTER_API_KEY"),
             "tavily_api_key": os.environ.get("TAVILY_API_KEY"),
+            "language": os.environ.get("LANGUAGE"),
             "context_window": os.environ.get("CONTEXT_WINDOW", 200000),
         }
 

@@ -52,7 +52,7 @@ async def run():
             tavily_client = TavilyClient(api_key=tavily_api_key)
             deps = TavilyDeps(tavily_client=tavily_client)
 
-        agent = get_chen_agent()
+        agent = get_chen_agent(language=settings.language)
         chat_interface = ChatInterface(
             agent=agent,
             deps=deps,

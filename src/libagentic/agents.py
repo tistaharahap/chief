@@ -44,6 +44,7 @@ def get_chen_agent(
     temperature: Annotated[
         float, Doc("""The temperature to use for the model, the lower it is, the less adventurous the model will be""")
     ] = 0.2,
+    language: Annotated[str, Doc("""The language for the AI to use""")] = "English",
 ) -> Agent:
     """
     Returns the Chen agent using OpenRouter for model access. Web search is enabled by default using the Tavily tool.
@@ -51,6 +52,7 @@ def get_chen_agent(
     Args:
         mcps (list[MCPServer] | None, optional): List of MCP servers to connect the agent to. Defaults to None.
         temperature (float, optional): The temperature to use. Defaults to 0.2.
+        language (str, optional): The language for the AI to use. Defaults to "English".
 
     Returns:
         Agent: The Chen agent
@@ -61,7 +63,7 @@ def get_chen_agent(
     return Agent(
         fallback_model,
         name="Chen",
-        system_prompt=CHEN_SYSTEM_PROMPT,
+        system_prompt=CHEN_SYSTEM_PROMPT.format(language=language),
         mcp_servers=mcps,
         model_settings=settings,
         deps_type=TavilyDeps,

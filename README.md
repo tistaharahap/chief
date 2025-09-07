@@ -6,6 +6,8 @@ A sophisticated AI agent framework built with Pydantic AI, featuring two main ap
 
 On the other hand, **Chief** is a barebone agent with a barebone system prompt. Chief provides an entry point if you want to write your own agents using the same patterns that Chen uses.
 
+Fork the repository and customize **Chief** however you want!
+
 ## Features
 
 - **Dual Agent System**: Chief and Chen applications with distinct personalities and capabilities

@@ -432,17 +432,15 @@ Available commands:
                     asyncio.create_task(self._background_title_generation())
 
                 # Update status for the next phase (this is where the long delay happens)
-                status.update("[bold blue]Initializing AI agent (tools & model providers)...")
+                status.update("[bold blue]Initializing agent...")
 
                 # Prepare agent with compressed context if available
                 current_agent = self._prepare_agent_with_context()
 
                 # Start the streaming context but don't stream yet
+                status.update("[bold blue]Awaiting response...")
                 stream_context = current_agent.run_stream(message, deps=self.deps)
                 result = await stream_context.__aenter__()
-
-                # Update status one final time before streaming
-                status.update("[bold blue]Starting response stream...")
 
             # Status is automatically cleared when exiting the status context
             # Now we can stream without the spinner interfering

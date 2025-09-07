@@ -18,6 +18,34 @@ On the other hand, **Chief** is a barebone agent with a barebone system prompt. 
 
 ## Quick Start
 
+### Easy Installation (Recommended)
+
+Install with a convenience script that creates convenient `chen` and `chief` commands:
+
+```bash
+curl -sSL https://raw.githubusercontent.com/tistaharahap/chief-ai/main/install.sh | bash
+```
+
+After installation, you can run:
+
+```bash
+chen --help    # Chen AI psychologist
+chief --help   # Basic AI agent
+chen           # Start Chen (triggers onboarding on first run)
+```
+
+### Manual Installation
+
+Alternatively, run directly with uvx:
+
+```bash
+# Run Chen directly
+uvx --python 3.13 --from chief-ai chen --help
+
+# Go straight to onboarding
+uvx --python 3.13 --from chief-ai chen
+```
+
 ### Installation
 
 ```bash

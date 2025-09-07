@@ -1,6 +1,10 @@
-from typing import Self
-
+import sys
 from pydantic import Field, model_validator
+
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 

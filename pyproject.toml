@@ -1,6 +1,6 @@
 [project]
 name = "chief-ai"
-version = "0.1.0"
+version = "0.1.1"
 description = "AI agent framework with Chief and Chen, a conversational AI psychologist with web search and multi-provider support in your terminal."
 authors = [
     { name = "Batista Harahap", email = "batista@bango29.com" }
@@ -37,6 +37,7 @@ dependencies = [
     "python-dotenv>=1.1.1",
     "tiktoken>=0.11.0",
     "uuid7>=0.1.0",
+    "typing_extensions>=4.0.0;python_version<'3.11'",
 ]
 readme = "README.md"
 requires-python = ">= 3.8"

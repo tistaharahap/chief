@@ -88,7 +88,7 @@ If the `anthropic_api_key` in `~/.chen/settings.json` is set, Claude 4 Sonnet wi
 
 To use free models, simply set the OpenRouter API key and leave the others unset.
 
-### Chen
+## Chen
 
 Chen has its settings defined in `~/.chen/settings.json` that looks like this:
 
@@ -102,7 +102,7 @@ Chen has its settings defined in `~/.chen/settings.json` that looks like this:
 }
 ```
 
-#### Settings Explained
+### Settings Explained
 
 Each of these settings items are going to be prompted during onboarding if not set. Here are some commands with regards to settings:
 
@@ -112,7 +112,7 @@ chen config get anthropic_api_key       # Get specific setting, follows the JSON
 chen config set context_window 150000   # Set specific setting
 ```
 
-#### Sessions
+### Sessions
 
 You can also find your chat history in `~/.chen/sessions/` with each session as a subdirectory there. A typical session directory might look like this:
 
@@ -142,7 +142,7 @@ drwxr-xr-x@ 14 tista  staff    448 Sep  7 23:07 ..
 
 The `history.jsonl` file contains the full conversation history in JSON Lines format, while `metadata.json` holds session metadata.
 
-#### In-chat Commands
+### In-chat Commands
 
 While in a chat session with Chen, you can use the following commands:
 

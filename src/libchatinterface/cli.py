@@ -8,11 +8,17 @@ import re
 import sys
 import termios
 import tty
+from collections.abc import AsyncIterable
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from pydantic_ai.messages import ModelRequest
+from pydantic_ai.messages import (
+    ModelRequest,
+    AgentStreamEvent,
+    FunctionToolCallEvent,
+    FunctionToolResultEvent,
+)
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
@@ -297,6 +303,35 @@ class ChatInterface:
         if system_prompt:
             self.session_manager.log_system_prompt(system_prompt)
 
+    async def _tool_event_handler(self, ctx, event_stream: AsyncIterable[AgentStreamEvent]):
+        """Handle tool events and display them to user in real-time."""
+        # self.console.print("[yellow]DEBUG: Event handler called![/yellow]")
+        async for event in event_stream:
+            # self.console.print(f"[yellow]DEBUG: Event type: {type(event).__name__}[/yellow]")
+            if isinstance(event, FunctionToolCallEvent):
+                # Show tool call initiation to user
+                tool_name = event.part.tool_name
+                # self.console.print(f"[yellow]DEBUG: Tool call detected: {tool_name}[/yellow]")
+                # Simplified args display for better UX
+                if tool_name == "web_search":
+                    # Extract query from args for web search
+                    # Handle case where args might be a string or dict
+                    if isinstance(event.part.args, dict):
+                        query = event.part.args.get("query", "unknown query")
+                    elif isinstance(event.part.args, str):
+                        query = event.part.args
+                    else:
+                        query = "unknown query"
+                    self.console.print(f"[dim cyan]🔍 Searching the web for: {query}[/dim cyan]")
+                else:
+                    # Generic tool call display
+                    self.console.print(f"[dim cyan]🔧 Using tool: {tool_name}[/dim cyan]")
+                    
+            elif isinstance(event, FunctionToolResultEvent):
+                # Show tool completion without result details (to avoid clutter)
+                # self.console.print(f"[yellow]DEBUG: Tool result event[/yellow]")
+                self.console.print(f"[dim green]✅ Tool completed successfully[/dim green]")
+
     def show_welcome(self):
         """Display welcome message."""
         welcome_text = Text(f"{self.assistant_name} AI Assistant", style="bold blue")
@@ -343,7 +378,7 @@ class ChatInterface:
             name=self.agent.name,
             system_prompt=extended_prompt,
             deps_type=getattr(self.agent, "deps_type", None),
-            tools=getattr(self.agent, "tools", []),
+            toolsets=getattr(self.agent, "toolsets", []),  # Fixed: use toolsets, not tools
             model_settings=getattr(self.agent, "model_settings", None),
             mcp_servers=getattr(self.agent, "mcp_servers", None),
         )
@@ -506,19 +541,101 @@ Available commands:
 
                 # Prepare agent with compressed context if available
                 current_agent = self._prepare_agent_with_context()
+                
+                # # DEBUG: Check if agent has tools
+                # self.console.print(f"[yellow]DEBUG: Current agent toolsets: {len(getattr(current_agent, 'toolsets', []))}[/yellow]")
+                # if hasattr(current_agent, 'toolsets') and current_agent.toolsets:
+                #     toolset = current_agent.toolsets[0]
+                #     if hasattr(toolset, 'tools'):
+                #         tools = toolset.tools
+                #         self.console.print(f"[yellow]DEBUG: Available tools: {list(tools.keys())}[/yellow]")
+                #     else:
+                #         self.console.print(f"[yellow]DEBUG: Toolset has no tools attribute[/yellow]")
+                # else:
+                #     self.console.print(f"[yellow]DEBUG: Agent has no toolsets[/yellow]")
 
                 # Start the streaming context but don't stream yet
                 status.update("[bold blue]Awaiting response...")
 
-                # Always get message history from session manager (works for both new and resumed sessions)
+                # Get message history from session manager but exclude the current user message 
+                # (which was just logged above) to avoid duplication
                 message_history = []
                 if hasattr(self.session_manager, "get_pydantic_message_history"):
-                    message_history = self.session_manager.get_pydantic_message_history()
+                    all_history = self.session_manager.get_pydantic_message_history()
+                    # Remove the last message if it's the current user query (just logged)
+                    if all_history and len(all_history) > 0:
+                        last_msg = all_history[-1]
+                        if (hasattr(last_msg, 'parts') and len(last_msg.parts) > 0 and 
+                            hasattr(last_msg.parts[0], 'content') and 
+                            last_msg.parts[0].content == message):
+                            # Current message is already in history, exclude it
+                            message_history = all_history[:-1]
+                        else:
+                            message_history = all_history
+                    else:
+                        message_history = all_history
+                    
+                    # # DEBUG: Examine problematic message history content
+                    # self.console.print(f"[red]DEBUG: Raw message history content:[/red]")
+                    # for i, msg in enumerate(message_history):
+                    #     self.console.print(f"[red]  {i}: {type(msg).__name__}[/red]")
+                    #     if hasattr(msg, 'parts'):
+                    #         for j, part in enumerate(msg.parts):
+                    #             self.console.print(f"[red]    Part {j}: {type(part).__name__}[/red]")
+                    #             if hasattr(part, 'content'):
+                    #                 content_preview = str(part.content)[:100] + "..." if len(str(part.content)) > 100 else str(part.content)
+                    #                 self.console.print(f"[red]      Content: {content_preview}[/red]")
+                    #             if hasattr(part, 'tool_name'):
+                    #                 self.console.print(f"[red]      Tool: {part.tool_name}[/red]")
+                
+                # # DEBUG: Check message history
+                # self.console.print(f"[yellow]DEBUG: Message history length: {len(message_history)}[/yellow]")
+                # for i, msg in enumerate(message_history[-3:]):  # Show last 3 messages
+                #     self.console.print(f"[yellow]DEBUG: Msg {i}: {type(msg).__name__}[/yellow]")
 
-                # Always pass message_history to maintain conversation continuity
-                stream_context = current_agent.run_stream(message, deps=self.deps, message_history=message_history)
-
-                result = await stream_context.__aenter__()
+                # Check if this might involve tool calls (heuristic based on keywords)
+                # If so, use run() instead of run_stream() to ensure we get complete responses
+                might_use_tools = any(keyword in message.lower() for keyword in [
+                    'search', 'web', 'internet', 'find', 'look up', 'latest', 'current',
+                    'price', 'weather', 'news', 'time', 'date'
+                ])
+                
+                if might_use_tools:
+                    # Use regular run() for potential tool-using queries
+                    # This ensures we get the complete response including tool results
+                    status.update("[bold blue]Processing request...")
+                    result = await current_agent.run(
+                        message,
+                        deps=self.deps,
+                        message_history=message_history
+                    )
+                    # Create a dummy stream context to match the expected interface
+                    class DummyStreamContext:
+                        def __init__(self, run_result):
+                            self.result = run_result
+                        async def __aenter__(self):
+                            return self
+                        async def __aexit__(self, *args):
+                            pass
+                        async def stream_text(self, delta=False, debounce_by=0):
+                            # Yield the complete response as a single chunk
+                            yield self.result.output
+                        def all_messages(self):
+                            return self.result.all_messages()
+                        def usage(self):
+                            return self.result.usage()
+                    
+                    stream_context = DummyStreamContext(result)
+                    result = stream_context
+                else:
+                    # Use streaming for non-tool queries
+                    stream_context = current_agent.run_stream(
+                        message, 
+                        deps=self.deps, 
+                        message_history=message_history,
+                        event_stream_handler=self._tool_event_handler
+                    )
+                    result = await stream_context.__aenter__()
 
             # Status is automatically cleared when exiting the status context
             # Now we can stream without the spinner interfering
@@ -541,6 +658,20 @@ Available commands:
                     self.console.print(f"\n[red]Streaming error: {str(stream_error)}[/red]")
 
                 self.console.print()  # New line after response
+
+                # Check if tools were called - if so, we need to get the final response
+                # from messages since streaming might not include tool results
+                all_messages = result.all_messages()
+                has_tool_calls = any(
+                    type(part).__name__ == 'ToolCallPart'
+                    for msg in all_messages
+                    for part in getattr(msg, 'parts', [])
+                )
+                
+                # Note: The workaround above ensures tool results are included in the response
+                # by using run() instead of run_stream() for queries that might use tools.
+                # This is necessary because run_stream() doesn't properly stream the final
+                # response after tool calls in the current version of Pydantic AI.
 
                 # Log usage and costs from this run
                 try:
@@ -570,9 +701,10 @@ Available commands:
                             or len(all_messages) > getattr(self, "_last_message_count", 0)
                         ]
 
-                    # Log new messages if we have them
+                    # Log new messages if we have them, skipping the current user message
+                    # which was already logged via log_user_message()
                     if new_messages:
-                        self.session_manager.log_pydantic_messages(new_messages)
+                        self.session_manager.log_pydantic_messages(new_messages, skip_user_message=message)
                     else:
                         # Even if no "new" messages, we need to ensure current assistant response tokens are counted
                         # Find the latest assistant response and log it for token counting
@@ -581,6 +713,7 @@ Available commands:
                         assistant_responses = [msg for msg in all_messages if isinstance(msg, ModelResponse)]
                         if assistant_responses:
                             latest_response = assistant_responses[-1]
+                            # No need to skip user message here as we're only logging the response
                             self.session_manager.log_pydantic_messages([latest_response])
 
                     # ALWAYS check compression after assistant responses

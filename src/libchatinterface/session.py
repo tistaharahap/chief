@@ -288,7 +288,7 @@ class SessionManager:
         self._log_message_to_history(message_data)
         self._update_metadata()
 
-    def log_pydantic_messages(self, pydantic_messages: list[ModelMessage]) -> None:
+    def log_pydantic_messages(self, pydantic_messages: list[ModelMessage], skip_user_message: str | None = None) -> None:
         """Log Pydantic AI ModelMessage objects to the session.
 
         This method extracts and logs all message types from Pydantic AI's message system,
@@ -296,6 +296,7 @@ class SessionManager:
 
         Args:
             pydantic_messages: List of Pydantic AI ModelMessage objects
+            skip_user_message: Optional user message content to skip (to avoid duplicates)
         """
         for msg in pydantic_messages:
             timestamp = datetime.now(UTC).isoformat()
@@ -303,11 +304,26 @@ class SessionManager:
             if isinstance(msg, ModelRequest):
                 # Process each part in the request
                 for part in msg.parts:
-                    if hasattr(part, "content"):
+                    # Handle different part types
+                    if part.__class__.__name__ == "ToolReturnPart":
+                        # Tool return parts have tool results
+                        message_data = {
+                            "timestamp": timestamp,
+                            "type": "tool_return",
+                            "content": str(getattr(part, "content", "")),
+                            "message_index": self.message_count,
+                            "pydantic_type": part.__class__.__name__,
+                            "pydantic_data": to_jsonable_python(part),
+                        }
+                    elif hasattr(part, "content"):
                         # Determine message type based on part type
                         if part.__class__.__name__ == "SystemPromptPart":
                             msg_type = "system_prompt"
                         elif part.__class__.__name__ == "UserPromptPart":
+                            # Check if we should skip this user message to avoid duplicates
+                            if skip_user_message and part.content == skip_user_message:
+                                continue  # Skip this message as it was already logged
+                            
                             msg_type = "user_message"
                             # Capture first user message for title
                             if self.first_user_message is None and hasattr(part, "content"):
@@ -323,17 +339,34 @@ class SessionManager:
                             "pydantic_type": part.__class__.__name__,
                             "pydantic_data": to_jsonable_python(part),
                         }
+                    else:
+                        # Other parts without content
+                        continue
 
-                        self.messages.append(message_data)
-                        self.message_count += 1
-                        self.last_message_timestamp = timestamp
+                    self.messages.append(message_data)
+                    self.message_count += 1
+                    self.last_message_timestamp = timestamp
 
-                        self._log_message_to_history(message_data)
+                    self._log_message_to_history(message_data)
 
             elif isinstance(msg, ModelResponse):
                 # Process each part in the response
                 for part in msg.parts:
-                    if hasattr(part, "content"):
+                    # Handle different part types
+                    if part.__class__.__name__ == "ToolCallPart":
+                        # Tool call parts don't have content but have tool_name and args
+                        message_data = {
+                            "timestamp": timestamp,
+                            "type": "tool_call",
+                            "content": f"Tool call: {getattr(part, 'tool_name', 'unknown')}",
+                            "message_index": self.message_count,
+                            "pydantic_type": part.__class__.__name__,
+                            "pydantic_data": to_jsonable_python(part),
+                            "model_name": getattr(msg, "model_name", None),
+                            "usage": to_jsonable_python(getattr(msg, "usage", None)) if hasattr(msg, "usage") else None,
+                        }
+                    elif hasattr(part, "content"):
+                        # Text parts and other parts with content
                         message_data = {
                             "timestamp": timestamp,
                             "type": "assistant_response",
@@ -344,12 +377,15 @@ class SessionManager:
                             "model_name": getattr(msg, "model_name", None),
                             "usage": to_jsonable_python(getattr(msg, "usage", None)) if hasattr(msg, "usage") else None,
                         }
+                    else:
+                        # Other parts without content
+                        continue
 
-                        self.messages.append(message_data)
-                        self.message_count += 1
-                        self.last_message_timestamp = timestamp
+                    self.messages.append(message_data)
+                    self.message_count += 1
+                    self.last_message_timestamp = timestamp
 
-                        self._log_message_to_history(message_data)
+                    self._log_message_to_history(message_data)
 
         # Update metadata after processing all messages
         self._update_metadata()
@@ -490,30 +526,98 @@ class SessionManager:
             List of ModelMessage objects for use with Pydantic AI agent.run()
         """
         try:
-            from pydantic_ai.messages import ModelRequest, ModelResponse, TextPart, UserPromptPart
+            from pydantic_ai.messages import ModelRequest, ModelResponse, TextPart, UserPromptPart, ToolCallPart, ToolReturnPart
+            from pydantic_core import from_json
         except ImportError:
             # Fallback if pydantic_ai not available
             return []
 
+        # Use pydantic_data to reconstruct the exact original messages
         pydantic_messages = []
+        current_request_parts = []
+        current_response_parts = []
         
         for message in self.messages:
             msg_type = message.get("type", "unknown")
-            content = message.get("content", "")
-
+            pydantic_data = message.get("pydantic_data")
+            
             # Skip system prompts and compression events
             if msg_type in ["system_prompt", "context_compression"]:
                 continue
+            
+            # If we have pydantic_data, reconstruct the exact part
+            if pydantic_data:
+                try:
+                    # Get the original part class name
+                    pydantic_type = message.get("pydantic_type", "")
+                    
+                    # Reconstruct the part from stored data
+                    if pydantic_type == "UserPromptPart":
+                        part = UserPromptPart(**pydantic_data)
+                        current_request_parts.append(part)
+                    elif pydantic_type == "ToolReturnPart":
+                        # Reconstruct ToolReturnPart from stored data
+                        part = ToolReturnPart(**pydantic_data)
+                        current_request_parts.append(part)
+                    elif pydantic_type == "TextPart":
+                        part = TextPart(**pydantic_data)
+                        current_response_parts.append(part)
+                    elif pydantic_type == "ToolCallPart":
+                        # Reconstruct ToolCallPart from stored data
+                        part = ToolCallPart(**pydantic_data)
+                        current_response_parts.append(part)
+                    
+                    # Check if we need to create ModelRequest/ModelResponse
+                    # UserPromptPart or ToolReturnPart = start of ModelRequest
+                    if pydantic_type in ["UserPromptPart", "ToolReturnPart"]:
+                        # If we have pending response parts, create ModelResponse first
+                        if current_response_parts:
+                            response = ModelResponse(parts=current_response_parts)
+                            pydantic_messages.append(response)
+                            current_response_parts = []
+                        # Continue collecting request parts
+                    
+                    # TextPart or ToolCallPart = part of ModelResponse
+                    elif pydantic_type in ["TextPart", "ToolCallPart"]:
+                        # If we have pending request parts, create ModelRequest first
+                        if current_request_parts:
+                            request = ModelRequest(parts=current_request_parts)
+                            pydantic_messages.append(request)
+                            current_request_parts = []
+                        # Continue collecting response parts
+                        
+                except Exception:
+                    # If reconstruction fails, fall back to simple approach
+                    continue
+            else:
+                # Fallback to original logic if no pydantic_data
+                content = message.get("content", "")
+                
+                if msg_type == "user_message":
+                    # Create ModelRequest for previous response parts if any
+                    if current_response_parts:
+                        response = ModelResponse(parts=current_response_parts)
+                        pydantic_messages.append(response)
+                        current_response_parts = []
+                    
+                    current_request_parts.append(UserPromptPart(content=content))
 
-            # Convert user messages to ModelRequest
-            if msg_type == "user_message":
-                request = ModelRequest(parts=[UserPromptPart(content=content)])
-                pydantic_messages.append(request)
-
-            # Convert assistant responses to ModelResponse
-            elif msg_type == "assistant_response":
-                response = ModelResponse(parts=[TextPart(content=content)])
-                pydantic_messages.append(response)
+                elif msg_type == "assistant_response":
+                    # Create ModelRequest for previous request parts if any
+                    if current_request_parts:
+                        request = ModelRequest(parts=current_request_parts)
+                        pydantic_messages.append(request)
+                        current_request_parts = []
+                    
+                    current_response_parts.append(TextPart(content=content))
+        
+        # Add any remaining parts
+        if current_request_parts:
+            request = ModelRequest(parts=current_request_parts)
+            pydantic_messages.append(request)
+        if current_response_parts:
+            response = ModelResponse(parts=current_response_parts)
+            pydantic_messages.append(response)
 
         return pydantic_messages
 

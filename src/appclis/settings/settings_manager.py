@@ -93,7 +93,7 @@ class SettingsManager:
         # Anthropic API Key
         anthropic_key = self._prompt_for_setting(
             "anthropic_api_key",
-            "Anthropic API key",
+            "Your Anthropic API key",
             "https://console.anthropic.com/settings/keys",
             env_defaults.get("anthropic_api_key"),
             mask_input=True,
@@ -104,7 +104,7 @@ class SettingsManager:
         # OpenAI API Key
         openai_key = self._prompt_for_setting(
             "openai_api_key",
-            "OpenAI API key",
+            "Your OpenAI API key",
             "https://platform.openai.com/api-keys",
             env_defaults.get("openai_api_key"),
             mask_input=True,
@@ -115,7 +115,7 @@ class SettingsManager:
         # OpenRouter API Key
         openrouter_key = self._prompt_for_setting(
             "openrouter_api_key",
-            "OpenRouter API key",
+            "Your OpenRouter API key",
             "https://openrouter.ai/settings/keys",
             env_defaults.get("openrouter_api_key"),
             mask_input=True,
@@ -126,7 +126,7 @@ class SettingsManager:
         # Tavily API Key
         tavily_key = self._prompt_for_setting(
             "tavily_api_key",
-            "Tavily API key (for web search)",
+            "Your Tavily API key (for web search)",
             "https://app.tavily.com/home",
             env_defaults.get("tavily_api_key"),
             mask_input=True,
@@ -137,7 +137,7 @@ class SettingsManager:
         # Language
         language = self._prompt_for_setting(
             "language",
-            "Language for the AI to use",
+            "Your preferred language (ex: English, Singlish, Klingon, Bahasa Indonesia with Jaksel dialect)",
             None,
             env_defaults.get("language", "English"),
         )

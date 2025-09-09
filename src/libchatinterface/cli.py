@@ -510,16 +510,13 @@ Available commands:
                 # Start the streaming context but don't stream yet
                 status.update("[bold blue]Awaiting response...")
 
-                # Check if this is a resumed session and get message history
-                message_history = None
+                # Always get message history from session manager (works for both new and resumed sessions)
+                message_history = []
                 if hasattr(self.session_manager, "get_pydantic_message_history"):
                     message_history = self.session_manager.get_pydantic_message_history()
 
-                # Use message history for resumed sessions
-                if message_history:
-                    stream_context = current_agent.run_stream(message, deps=self.deps, message_history=message_history)
-                else:
-                    stream_context = current_agent.run_stream(message, deps=self.deps)
+                # Always pass message_history to maintain conversation continuity
+                stream_context = current_agent.run_stream(message, deps=self.deps, message_history=message_history)
 
                 result = await stream_context.__aenter__()
 
@@ -559,12 +556,19 @@ Available commands:
                 try:
                     all_messages = result.all_messages()
                     # Only log new messages (avoid duplicating across sessions)
-                    new_messages = [
-                        msg
-                        for msg in all_messages
-                        if not hasattr(self, "_last_message_count")
-                        or len(all_messages) > getattr(self, "_last_message_count", 0)
-                    ]
+                    # If we passed message_history, all_messages includes those + new messages
+                    # So we need to slice off the history we already have
+                    if message_history and len(message_history) > 0:
+                        # Skip the history messages we passed in, only log truly new messages
+                        new_messages = all_messages[len(message_history):]
+                    else:
+                        # Original logic for when no message_history was passed
+                        new_messages = [
+                            msg
+                            for msg in all_messages
+                            if not hasattr(self, "_last_message_count")
+                            or len(all_messages) > getattr(self, "_last_message_count", 0)
+                        ]
 
                     # Log new messages if we have them
                     if new_messages:

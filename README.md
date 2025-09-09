@@ -82,7 +82,8 @@ Chen has its settings defined in `~/.chen/settings.json` that looks like this:
   "openai_api_key": "sk-...",
   "openrouter_api_key": "sk-or-...",
   "tavily_api_key": "tvly_...",
-  "context_window": 200000
+  "context_window": 200000,
+  "language": "English"
 }
 ```
 

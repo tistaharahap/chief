@@ -483,6 +483,40 @@ class SessionManager:
         self._log_message_to_history(compression_data)
         self._update_metadata()
 
+    def get_pydantic_message_history(self) -> list:
+        """Convert stored conversation context to Pydantic AI ModelMessage format.
+
+        Returns:
+            List of ModelMessage objects for use with Pydantic AI agent.run()
+        """
+        try:
+            from pydantic_ai.messages import ModelRequest, ModelResponse, TextPart, UserPromptPart
+        except ImportError:
+            # Fallback if pydantic_ai not available
+            return []
+
+        pydantic_messages = []
+        
+        for message in self.messages:
+            msg_type = message.get("type", "unknown")
+            content = message.get("content", "")
+
+            # Skip system prompts and compression events
+            if msg_type in ["system_prompt", "context_compression"]:
+                continue
+
+            # Convert user messages to ModelRequest
+            if msg_type == "user_message":
+                request = ModelRequest(parts=[UserPromptPart(content=content)])
+                pydantic_messages.append(request)
+
+            # Convert assistant responses to ModelResponse
+            elif msg_type == "assistant_response":
+                response = ModelResponse(parts=[TextPart(content=content)])
+                pydantic_messages.append(response)
+
+        return pydantic_messages
+
 
 class SessionLister:
     """Handles scanning and displaying past chat sessions for resumption."""
@@ -804,40 +838,3 @@ class ResumableSessionManager(SessionManager):
             # If we can't load history, start fresh but keep metadata
             pass
 
-    def get_conversation_context(self) -> list[dict[str, Any]]:
-        """Get the full conversation context for display in resumed chat."""
-        return self.messages.copy()
-
-    def get_pydantic_message_history(self) -> list:
-        """Convert stored conversation context to Pydantic AI ModelMessage format.
-
-        Returns:
-            List of ModelMessage objects for use with Pydantic AI agent.run()
-        """
-        try:
-            from pydantic_ai.messages import ModelRequest, ModelResponse, TextPart, UserPromptPart
-        except ImportError:
-            # Fallback if pydantic_ai not available
-            return []
-
-        pydantic_messages = []
-
-        for message in self.messages:
-            msg_type = message.get("type", "unknown")
-            content = message.get("content", "")
-
-            # Skip system prompts and compression events
-            if msg_type in ["system_prompt", "context_compression"]:
-                continue
-
-            # Convert user messages to ModelRequest
-            if msg_type == "user_message":
-                request = ModelRequest(parts=[UserPromptPart(content=content)])
-                pydantic_messages.append(request)
-
-            # Convert assistant responses to ModelResponse
-            elif msg_type == "assistant_response":
-                response = ModelResponse(parts=[TextPart(content=content)])
-                pydantic_messages.append(response)
-
-        return pydantic_messages

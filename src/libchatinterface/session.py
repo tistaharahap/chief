@@ -517,6 +517,14 @@ class SessionManager:
 
         return pydantic_messages
 
+    def get_conversation_context(self) -> list[dict]:
+        """Get raw conversation messages for display purposes.
+        
+        Returns:
+            List of raw message dictionaries as stored in the session.
+        """
+        return self.messages
+
 
 class SessionLister:
     """Handles scanning and displaying past chat sessions for resumption."""
